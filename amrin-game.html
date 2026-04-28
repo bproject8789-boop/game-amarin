@@ -137,7 +137,7 @@ canvas{position:absolute;inset:0;touch-action:none}
 <script>
 // ── CONFIG ──
 function getAdminCfg(){
-  try{return JSON.parse(localStorage.getItem('amrin_admin_cfg'))||defCfg();}catch(e){return defCfg();}
+  return defCfg();
 }
 function defCfg(){
   return{
@@ -350,7 +350,7 @@ function loop(ts){
   if(shakeT>0)shakeT-=dt;
   var ox=shakeT>0?(Math.random()-.5)*10:0,oy=shakeT>0?(Math.random()-.5)*8:0;
   ctx.clearRect(0,0,W,H);
-  var bg=ctx.createRadialGradient(W/2,H*.65,0,W/2,H*.65,H);bg.addColorStop(0,'#1c0a01');bg.addColorStop(1,'#050100');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1c0a01';ctx.fillRect(0,0,W,H);;bg.addColorStop(0,'#1c0a01');bg.addColorStop(1,'#050100');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   if(trail.length>1){for(var ti=1;ti<trail.length;ti++){var a=ti/trail.length;ctx.beginPath();ctx.moveTo(trail[ti-1].x+ox,trail[ti-1].y+oy);ctx.lineTo(trail[ti].x+ox,trail[ti].y+oy);ctx.strokeStyle='rgba(255,240,180,'+a*.75+')';ctx.lineWidth=a*6;ctx.lineCap='round';ctx.stroke();}if(trail.length>20)trail=trail.slice(-20);}
   spawnT+=dt;
   if(spawnT>=LV[level].spawn){spawnT=0;doSpawn(Math.random()<LV[level].bomb);if(Math.random()<.4)doSpawn(Math.random()<LV[level].bomb);}
