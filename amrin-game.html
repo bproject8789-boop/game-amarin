@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>อมรินทร์ — ฟันอาหาร!</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap');
-*{box-sizing:border-box;margin:0;padding:0;touch-action:none;user-select:none;-webkit-user-select:none}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none}
+html,body,canvas{touch-action:none}
+button,input,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0400;font-family:'Mitr',sans-serif}
 canvas{position:absolute;inset:0}
 #ui{position:absolute;inset:0;pointer-events:none}
@@ -57,8 +60,27 @@ canvas{position:absolute;inset:0}
   <div class="targets" id="targets" style="display:none"></div>
   <div class="combo-flash" id="cf"></div>
 
+  <!-- CONSENT (หน้ายอมรับสิทธิ์ LINE) -->
+  <div class="screen" id="scr-consent">
+    <div class="brand-title">ฟันอาหาร<br>อมรินทร์!</div>
+    <div class="brand-sub">หนองใหญ่ • ของแซ่บทุกจาน</div>
+    <div class="deco-line"></div>
+    <div style="font-size:54px;margin:8px 0">🔐</div>
+    <div style="font-family:'Noto Serif Thai',serif;font-size:18px;color:#FFD000;text-align:center;margin-bottom:8px">ยินดีต้อนรับ!</div>
+    <div class="how-to" style="max-width:320px">
+      <p style="text-align:left;line-height:1.8">
+        แอปนี้จะขอเข้าถึงข้อมูลจากบัญชี <b style="color:#FFD000">LINE</b> ของคุณ:<br>
+        ✓ ชื่อโปรไฟล์ และรูปโปรไฟล์<br>
+        ✓ User ID (เพื่อเก็บคะแนนสะสม)<br><br>
+        <span style="color:#8a6a40;font-size:11px">ข้อมูลใช้สำหรับบันทึกคะแนนและคูปองเท่านั้น ไม่ถูกแชร์ไปยังบุคคลที่สาม</span>
+      </p>
+    </div>
+    <button class="btn-fire" onclick="acceptConsent()">✓ ยอมรับและเริ่มเล่น</button>
+    <button class="btn-sec" style="margin-top:8px;pointer-events:auto" onclick="declineConsent()">ไม่ยอมรับ</button>
+  </div>
+
   <!-- LOGIN -->
-    <div class="screen" id="scr-login">
+  <div class="screen hide" id="scr-login">
     <div class="brand-title">ฟันอาหาร<br>อมรินทร์!</div>
     <div class="brand-sub">หนองใหญ่ • ของแซ่บทุกจาน</div>
     <div class="deco-line"></div>
@@ -136,23 +158,9 @@ function getImg(f){
 }
 
 // ── PLAYER ──
-var PL={uid:'',name:'',totalPts:0,coupons:[]};
-function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)PL=d;}catch(e){}}
+var PL={uid:'',name:'',totalPts:0,coupons:[],pic:''};
+function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)Object.assign(PL,d);}catch(e){}}
 function savePL(){localStorage.setItem('amrin_player_'+PL.uid,JSON.stringify(PL));}
-
-function doLogin(){
-  var uid=document.getElementById('line-uid').value.trim();
-  var name=document.getElementById('line-name').value.trim();
-  if(!uid){alert('กรุณาใส่ Line User ID');return;}
-  if(!name){alert('กรุณาใส่ชื่อของคุณ');return;}
-  PL={uid:uid,name:name,totalPts:0,coupons:[]};
-  loadPL(uid);PL.uid=uid;PL.name=name;
-  document.getElementById('p-name').textContent=PL.name;
-  document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
-  buildMenuPreview();
-  hideAll();
-  document.getElementById('scr-title').classList.remove('hide');
-}
 
 function buildMenuPreview(){
   var el=document.getElementById('menu-preview');
@@ -322,10 +330,6 @@ document.addEventListener('touchend',function(e){
   e.preventDefault();pdown=false;trail=[];
 },{passive:false});
 
-cv.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];ppx=px;ppy=py;px=t.clientX;py=t.clientY;trail.push({x:px,y:py});},{passive:false});
-cv.addEventListener('touchend',function(e){e.preventDefault();pdown=false;trail=[];},{passive:false});
-
-);btn.classList.add('on');level=lv;}
 function hideAll(){document.querySelectorAll('.screen').forEach(function(s){s.classList.add('hide');});}
 
 function startGame(){
@@ -384,24 +388,57 @@ function viewCoupons(){
       +'<div style="margin-left:auto;font-size:11px;color:'+sc+'">'+stat+'</div></div>'
       +'<div style="font-family:monospace;font-size:15px;color:#fff;background:rgba(0,0,0,.4);border-radius:6px;padding:4px 10px;display:inline-block;letter-spacing:.1em">'+cp.code+'</div>'
       +'<div style="font-size:10px;color:#e57373;margin-top:4px">⏰ หมดอายุ: '+exp.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'})+'</div>'
-      +(!cp.used&&!expired?'<button onclick="useCoupon('+i+')" style="margin-top:8px;padding:5px 14px;background:linear-gradient(135deg,#bf360c,#E64A19);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Mitr,sans-serif">ใช้คูปองนี้</button>':'')
+      +(!cp.used&&!expired?'<button data-coupon-idx="'+i+'" class="btn-use-coupon" style="margin-top:8px;padding:10px 22px;background:linear-gradient(135deg,#bf360c,#E64A19);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Mitr,sans-serif;pointer-events:auto;touch-action:manipulation">ใช้คูปองนี้</button>':'')
       +'</div>';
   }).join('');
   document.getElementById('scr-coupon').classList.remove('hide');
+  // bind ปุ่มใช้คูปอง — ใช้ click ปกติ (browser จะ synthesize จาก tap ให้)
+  el.querySelectorAll('.btn-use-coupon').forEach(function(btn){
+    btn.addEventListener('click',function(ev){
+      ev.preventDefault();ev.stopPropagation();
+      var idx=parseInt(btn.getAttribute('data-coupon-idx'),10);
+      askUseCoupon(idx);
+    });
+  });
 }
-function useCoupon(i){if(!confirm('ยืนยันการใช้คูปอง "'+PL.coupons[i].name+'"?'))return;PL.coupons[i].used=true;PL.coupons[i].usedAt=new Date().toISOString();savePL();viewCoupons();}
+
+// Confirm dialog แบบในแอป (แทน confirm() ที่บางมือถือบล็อก)
+function askUseCoupon(i){
+  var cp=PL.coupons[i];if(!cp)return;
+  // สร้าง modal overlay
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px;pointer-events:auto';
+  ov.innerHTML='<div style="background:#1a0a02;border:1px solid rgba(255,180,0,.4);border-radius:16px;padding:20px;max-width:300px;width:100%;text-align:center">'
+    +'<div style="font-size:40px;margin-bottom:8px">'+cp.icon+'</div>'
+    +'<div style="font-family:\'Noto Serif Thai\',serif;font-size:16px;color:#FFD000;margin-bottom:6px">ยืนยันใช้คูปอง?</div>'
+    +'<div style="font-size:13px;color:#c8a060;margin-bottom:14px">'+cp.name+'</div>'
+    +'<div style="font-size:11px;color:#e57373;margin-bottom:16px">⚠️ เมื่อใช้แล้วจะไม่สามารถยกเลิกได้</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center">'
+    +'<button id="ac-cancel" style="padding:10px 20px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.06);color:#c8a060;font-size:13px;font-weight:600;cursor:pointer;font-family:Mitr,sans-serif">ยกเลิก</button>'
+    +'<button id="ac-confirm" style="padding:10px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#bf360c,#E64A19);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Mitr,sans-serif">ยืนยันใช้</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('ac-cancel').addEventListener('click',function(){document.body.removeChild(ov);});
+  document.getElementById('ac-confirm').addEventListener('click',function(){
+    PL.coupons[i].used=true;PL.coupons[i].usedAt=new Date().toISOString();
+    savePL();document.body.removeChild(ov);viewCoupons();
+  });
+}
+
+function useCoupon(i){askUseCoupon(i);}
 function goTitle(){hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');}
 
 var LIFF_ID='2009929388-NnhEcutA';
-var PL={uid:'',name:'',totalPts:0,coupons:[],pic:''};
-function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)Object.assign(PL,d);}catch(e){}}
-function savePL(){localStorage.setItem('amrin_player_'+PL.uid,JSON.stringify(PL));}
+PL.pic='';
 function initLiff(){
-  if(typeof liff==='undefined'){setTimeout(initLiff,500);return;}
+  // ถ้าไม่ได้รันใน LINE in-app browser หรือ LIFF SDK โหลดไม่ได้ ให้ขึ้น manual login เลย
+  if(typeof liff==='undefined'){showManualLogin();return;}
+  // fallback: ถ้า init/login ค้างเกิน 5 วิ ให้ขึ้น manual login
+  var fallback=setTimeout(showManualLogin,5000);
   liff.init({liffId:LIFF_ID})
     .then(function(){if(!liff.isLoggedIn()){liff.login();return new Promise(function(){});}return liff.getProfile();})
-    .then(function(p){if(p)loginWith(p.userId,p.displayName,p.pictureUrl||'');})
-    .catch(function(){showManualLogin();});
+    .then(function(p){clearTimeout(fallback);if(p)loginWith(p.userId,p.displayName,p.pictureUrl||'');})
+    .catch(function(){clearTimeout(fallback);showManualLogin();});
 }
 function showManualLogin(){
   document.getElementById('liff-loading').style.display='none';
@@ -431,12 +468,31 @@ function doLogin(){
   loginWith(uid,name,'');
 }
 
+// ── CONSENT ──
+var CONSENT_KEY='amrin_consent_v1';
+function hasConsent(){try{return localStorage.getItem(CONSENT_KEY)==='1';}catch(e){return false;}}
+function acceptConsent(){
+  try{localStorage.setItem(CONSENT_KEY,'1');}catch(e){}
+  hideAll();
+  document.getElementById('scr-login').classList.remove('hide');
+  initLiff();
+}
+function declineConsent(){
+  alert('คุณจำเป็นต้องยอมรับเงื่อนไขเพื่อใช้งานแอปนี้');
+}
+
 window.addEventListener('load',function(){
   // Preload รูปอาหารทั้งหมดล่วงหน้า
-  FOODS.forEach(function(f){
+  getFoods().forEach(function(f){
     if(f.img){var im=new Image();im.src=f.img;IMGS[f.id]=im;}
   });
-  setTimeout(initLiff,300);
+  if(hasConsent()){
+    // เคยยอมรับแล้ว → ข้ามหน้า consent ไป LIFF login เลย
+    hideAll();
+    document.getElementById('scr-login').classList.remove('hide');
+    setTimeout(initLiff,300);
+  }
+  // ถ้ายังไม่เคยยอมรับ ปล่อยให้ scr-consent โชว์ default
 });
 </script>
 </body>
