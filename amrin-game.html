@@ -173,7 +173,7 @@ function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+u
 function savePL(){localStorage.setItem('amrin_player_'+PL.uid,JSON.stringify(PL));}
 
 // ── LIFF CONFIG — ใส่ LIFF ID ตรงนี้หลังสร้างใน LINE Developers ──
-var LIFF_ID = 'YOUR_LIFF_ID_HERE';
+var LIFF_ID = '2009929388-NnhEcutA';
 
 // ── LIFF INIT ──
 function initLiff(){
@@ -186,7 +186,7 @@ function initLiff(){
       if(!liff.isLoggedIn()){
         // ไม่ได้ login — redirect ไปหน้า LINE login
         liff.login();
-        return;
+        return new Promise(function(){});
       }
       // Login สำเร็จ — ดึง profile อัตโนมัติ
       return liff.getProfile();
