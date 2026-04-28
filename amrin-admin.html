@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>อมรินทร์ Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Mitr',sans-serif;background:#0f0a05;color:#f0e6d3;min-height:100vh}
+.bar{background:rgba(0,0,0,.85);border-bottom:1px solid rgba(245,200,66,.2);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.bar h1{font-family:'Noto Serif Thai',serif;font-size:18px;color:#FFD000}
+.bar p{font-size:11px;color:#8a6a40;margin-top:1px}
+.live{background:rgba(0,184,148,.15);border:1px solid rgba(0,184,148,.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#00b894;font-weight:600}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px}
+.sec{margin-bottom:28px}
+.sec-h{font-size:14px;font-weight:600;color:#f5c842;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(245,200,66,.15);border-radius:14px;padding:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sbox{background:rgba(255,255,255,.05);border-radius:10px;padding:12px;text-align:center}
+.sn{font-size:28px;font-weight:700;color:#f5c842}
+.sl{font-size:11px;color:#8a6a40;margin-top:2px}
+
+/* food grid */
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-bottom:12px}
+.fc{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:9px;position:relative}
+.fc.active{border-color:rgba(245,200,66,.4)}
+.fc.inactive{opacity:.5}
+
+/* THE FIX: use <label for="finpX"> wrapping the image zone */
+.img-lbl{display:block;width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.5);border:2px dashed rgba(255,255,255,.2);cursor:pointer;position:relative;transition:border-color .2s}
+.img-lbl:hover{border-color:#f5c842;background:rgba(245,200,66,.06)}
+.img-lbl img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+.img-lbl .em{font-size:56px;line-height:1;display:flex;align-items:center;justify-content:center;height:100%}
+.img-lbl .ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:13px;color:#FFD000;gap:5px;border-radius:9px}
+.img-lbl:hover .ov{opacity:1}
+
+/* file input MUST be in DOM but invisible — NOT display:none which some browsers block programmatically */
+.file-inp{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;top:0;left:0}
+
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:10px;color:#8a6a40;font-weight:500}
+.fld input,.fld select{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:6px 9px;color:#f0e6d3;font-size:12px;font-family:'Mitr',sans-serif;outline:none;width:100%;transition:border-color .2s}
+.fld input:focus,.fld select:focus{border-color:rgba(245,200,66,.5)}
+.fld input[type=range]{padding:2px 0;cursor:pointer;accent-color:#f5c842;height:22px;border:none;background:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.szrow{display:flex;justify-content:space-between;font-size:10px;color:#8a6a40;margin-top:2px}
+.szval{color:#f5c842;font-weight:700}
+.demo{display:flex;align-items:center;justify-content:center;min-height:60px;background:rgba(0,0,0,.3);border-radius:8px;overflow:hidden;margin-top:3px}
+.togrow{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#8a6a40}
+.tog{position:relative;width:40px;height:22px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog span{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:11px;cursor:pointer;transition:.3s}
+.tog span::before{content:'';position:absolute;width:16px;height:16px;background:#666;border-radius:50%;top:3px;left:3px;transition:.3s}
+.tog input:checked+span{background:rgba(0,184,148,.35)}
+.tog input:checked+span::before{background:#00b894;transform:translateX(18px)}
+.del-x{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;z-index:2}
+.del-x:hover{background:rgba(231,76,60,.4)}
+.rm-img{padding:4px 10px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.25);border-radius:6px;color:#e74c3c;font-size:11px;cursor:pointer;font-family:'Mitr',sans-serif;width:100%;margin-top:-4px}
+.rm-img:hover{background:rgba(231,76,60,.25)}
+.add-btn{width:100%;padding:12px;border:1.5px dashed rgba(245,200,66,.25);border-radius:12px;background:none;color:#8a6a40;font-size:13px;cursor:pointer;font-family:'Mitr',sans-serif;transition:all .2s}
+.add-btn:hover{border-color:rgba(245,200,66,.6);color:#f5c842;background:rgba(245,200,66,.04)}
+
+/* reward */
+.rl{display:flex;flex-direction:column;gap:10px}
+.re{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;position:relative;transition:border-color .2s}
+.re.on{border-color:rgba(245,200,66,.3);background:rgba(245,200,66,.03)}
+.re-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ico-btn{font-size:22px;cursor:pointer;background:rgba(255,255,255,.07);border-radius:7px;padding:3px 8px;border:1px solid rgba(255,255,255,.1);transition:background .2s}
+.ico-btn:hover{background:rgba(255,255,255,.15)}
+.re-nm{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(245,200,66,.25);border-radius:7px;padding:6px 10px;color:#f0e6d3;font-size:13px;font-family:'Mitr',sans-serif;outline:none}
+.re-nm:focus{border-color:#f5c842}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pill{display:inline-block;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:5px;padding:2px 7px;font-size:11px;color:#f5c842;font-weight:600}
+
+.save-btn{width:100%;padding:14px;background:linear-gradient(135deg,#b8720a,#f5c842);border:none;border-radius:12px;color:#1a0f00;font-size:16px;font-weight:700;cursor:pointer;font-family:'Noto Serif Thai',serif;transition:all .2s;box-shadow:0 4px 20px rgba(245,200,66,.2)}
+.save-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(245,200,66,.45)}
+.save-btn:active{transform:scale(.97)}
+
+.ptbl{width:100%;border-collapse:collapse;font-size:12px}
+.ptbl th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);color:#8a6a40;font-size:11px;font-weight:500}
+.ptbl td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.uid{font-family:monospace;font-size:11px;color:#85b7eb;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{display:inline-block;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.25);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:10px;color:#f5c842;margin:2px}
+.chip.u{opacity:.4;text-decoration:line-through}
+.chip.e{border-color:rgba(231,76,60,.3);color:#e57373;background:rgba(231,76,60,.06)}
+
+.lock{position:fixed;inset:0;background:#0f0a05;display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:14px}
+.lock h2{font-family:'Noto Serif Thai',serif;font-size:24px;color:#FFD000}
+.l-inp{background:rgba(0,0,0,.5);border:1px solid rgba(245,200,66,.35);border-radius:10px;padding:10px 16px;color:#f0e6d3;font-size:16px;font-family:'Mitr',sans-serif;outline:none;width:220px;text-align:center;letter-spacing:.1em}
+.l-btn{padding:12px 32px;background:linear-gradient(135deg,#b8720a,#f5c842);border:none;border-radius:10px;color:#1a0f00;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Serif Thai',serif}
+.toast{position:fixed;bottom:22px;right:22px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:opacity .35s;pointer-events:none;z-index:999;color:#fff;max-width:300px}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div id="lock" class="lock">
+  <div style="font-size:52px">🔐</div>
+  <h2>Admin อมรินทร์</h2>
+  <p style="font-size:12px;color:#8a6a40">ใส่รหัสผ่านเพื่อเข้าระบบ</p>
+  <input class="l-inp" id="pinp" type="password" placeholder="รหัสผ่าน">
+  <button class="l-btn" id="lbtn">เข้าสู่ระบบ</button>
+  <p style="font-size:11px;color:#5a4020">รหัสเริ่มต้น: amrin2569</p>
+</div>
+
+<div id="mc" style="display:none">
+  <div class="bar">
+    <div><h1>🍖 Admin อมรินทร์</h1><p>จัดการเมนูและรางวัลเกมส์</p></div>
+    <span class="live">● ระบบทำงาน</span>
+  </div>
+  <div class="wrap">
+
+    <div class="sec">
+      <div class="sec-h">📊 สถิติรวม</div>
+      <div class="stats">
+        <div class="sbox"><div class="sn" id="sp">0</div><div class="sl">ผู้เล่น</div></div>
+        <div class="sbox"><div class="sn" id="sc">0</div><div class="sl">คูปองที่แจก</div></div>
+        <div class="sbox"><div class="sn" id="su">0</div><div class="sl">คูปองใช้แล้ว</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">🍖 เมนูในเกมส์ — คลิกรูปเพื่ออัปโหลด (ตัดและบีบอัดอัตโนมัติ)</div>
+      <div class="fg" id="fg"></div>
+      <button class="add-btn" id="add-food">+ เพิ่มเมนูใหม่</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">🎁 รางวัลและคูปอง</div>
+      <div class="rl" id="rl"></div>
+      <button class="add-btn" id="add-rew" style="margin-top:10px">+ เพิ่มรางวัลใหม่</button>
+    </div>
+
+    <div class="sec">
+      <button class="save-btn" id="savebtn">💾 บันทึกการตั้งค่า (มีผลทันที)</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">👥 ลูกค้าที่เล่น
+        <button id="refbtn" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:none;color:#8a6a40;cursor:pointer;font-family:Mitr,sans-serif">รีเฟรช</button>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table class="ptbl">
+          <thead><tr><th>ชื่อ</th><th>Line UID</th><th>คะแนนสะสม</th><th>คูปอง</th></tr></thead>
+          <tbody id="pb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">🔐 เปลี่ยนรหัสผ่าน</div>
+      <div class="card">
+        <div class="g2">
+          <div class="fld"><label>รหัสผ่านใหม่</label><input type="password" id="np" placeholder="รหัสผ่านใหม่"></div>
+          <div class="fld"><label>ยืนยันรหัสผ่าน</label><input type="password" id="cp2" placeholder="ยืนยัน"></div>
+        </div>
+        <button id="chgpass" style="margin-top:10px;padding:7px 18px;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:8px;color:#f5c842;font-size:12px;cursor:pointer;font-family:Mitr,sans-serif">เปลี่ยนรหัสผ่าน</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var PKEY='amrin_admin_pass', CKEY='amrin_admin_cfg';
+var ICONS=['🥩','🍖','🌶','🍗','🥗','🍲','🍳','🍚','🥤','🧄','🎁','👑','💸','⭐','🏆','🎉'];
+var _n=0; function mkid(){return 'f'+(++_n)+'x'+Date.now();}
+
+function defCfg(){return{foods:[
+  {id:'f1',emoji:'🥩',name:'เนื้อน่องลาย',pts:15,size:70,w:1,img:'',active:true},
+  {id:'f2',emoji:'🍖',name:'หมูกรอบ',pts:12,size:64,w:2,img:'',active:true},
+  {id:'f3',emoji:'🌶',name:'พริกสด',pts:5,size:46,w:3,img:'',active:true},
+  {id:'f4',emoji:'🍗',name:'ไก่ย่าง',pts:10,size:62,w:2,img:'',active:true},
+  {id:'f5',emoji:'🥗',name:'ส้มตำ',pts:8,size:60,w:2,img:'',active:true},
+  {id:'f6',emoji:'🍲',name:'ต้มแซ่บ',pts:18,size:70,w:1,img:'',active:true},
+],rewards:[
+  {pts:30,icon:'🎟',name:'ส่วนลด 5 บาท',desc:'ใช้ได้ทุกเมนู',coupon:'AMRIN-5THB',expDays:30,active:true},
+  {pts:60,icon:'🍖',name:'ส่วนลด 15 บาท',desc:'เมนูหลักทุกชนิด',coupon:'AMRIN-15THB',expDays:14,active:true},
+  {pts:100,icon:'🥩',name:'ส่วนลด 30 บาท',desc:'ขั้นต่ำ 100 บาท',coupon:'AMRIN-30THB',expDays:7,active:true},
+  {pts:150,icon:'👑',name:'ฟรี! เมนูตามใจ',desc:'มูลค่าสูงสุด 50บ',coupon:'AMRIN-FREE50',expDays:3,active:true},
+]};}
+
+var cfg=defCfg();
+
+/* ── IMAGE PROCESSING: center-crop → 240×240 → JPEG 0.78 ── */
+function processImg(file,cb){
+  var r=new FileReader();
+  r.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var S=Math.min(img.width,img.height);
+      var sx=(img.width-S)/2, sy=(img.height-S)/2;
+      var cv=document.createElement('canvas');
+      cv.width=240;cv.height=240;
+      cv.getContext('2d').drawImage(img,sx,sy,S,S,0,0,240,240);
+      cb(cv.toDataURL('image/jpeg',0.78));
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+/* ── FOOD GRID ── */
+function renderFoods(){
+  var grid=document.getElementById('fg');
+  grid.innerHTML='';
+  // Also clear old file inputs from body
+  document.querySelectorAll('.file-inp').forEach(function(el){el.remove();});
+  cfg.foods.forEach(function(f,i){
+    grid.appendChild(makeFoodCard(f,i));
+  });
+}
+
+function makeFoodCard(f,i){
+  var hasImg=f.img&&f.img.startsWith('data:');
+  var finpId='finp'+i+'_'+f.id;
+
+  /* File input goes into BODY (not inside label/card) to avoid recursive trigger */
+  var finp=document.createElement('input');
+  finp.type='file';finp.accept='image/*';finp.className='file-inp';finp.id=finpId;
+  finp.addEventListener('change',function(){
+    if(!this.files||!this.files[0])return;
+    var file=this.files[0];
+    this.value='';
+    processImg(file,function(data){
+      cfg.foods[i].img=data;
+      toast('อัปโหลด "'+cfg.foods[i].name+'" สำเร็จ ✅');
+      renderFoods();
+    });
+  });
+  document.body.appendChild(finp);
+
+  /* Card */
+  var card=document.createElement('div');
+  card.className='fc '+(f.active===false?'inactive':'active');
+
+  /* Delete button */
+  var dx=document.createElement('button');
+  dx.className='del-x';dx.textContent='✕';dx.title='ลบเมนู';
+  dx.addEventListener('click',function(e){e.stopPropagation();delFood(i);});
+  card.appendChild(dx);
+
+  /* Image label — clicking this label triggers the file input via `for` attr */
+  var lbl=document.createElement('label');
+  lbl.className='img-lbl';
+  lbl.setAttribute('for',finpId);
+
+  if(hasImg){
+    var imgEl=document.createElement('img');
+    imgEl.src=f.img;
+    lbl.appendChild(imgEl);
+  }else{
+    var emEl=document.createElement('div');
+    emEl.className='em';emEl.textContent=f.emoji;
+    lbl.appendChild(emEl);
+  }
+  var ov=document.createElement('div');
+  ov.className='ov';
+  ov.innerHTML='<span style="font-size:22px">📷</span><span>คลิกเพื่ออัปโหลดรูป</span>';
+  lbl.appendChild(ov);
+  card.appendChild(lbl);
+
+  /* Remove image */
+  if(hasImg){
+    var rm=document.createElement('button');
+    rm.className='rm-img';rm.textContent='🗑 ลบรูป ใช้ Emoji แทน';
+    rm.addEventListener('click',function(){cfg.foods[i].img='';renderFoods();});
+    card.appendChild(rm);
+  }
+
+  /* Name */
+  var nw=mkFld('ชื่อเมนู');
+  var ni=document.createElement('input');
+  ni.value=f.name;ni.placeholder='ชื่อเมนู';
+  ni.addEventListener('input',function(){cfg.foods[i].name=this.value;});
+  nw.appendChild(ni);card.appendChild(nw);
+
+  /* Emoji */
+  var ew=mkFld('Emoji (ถ้าไม่อัปโหลดรูป)');
+  var ei=document.createElement('input');
+  ei.value=f.emoji;ei.maxLength=4;ei.style.fontSize='18px';
+  ei.addEventListener('input',function(){cfg.foods[i].emoji=this.value;});
+  ew.appendChild(ei);card.appendChild(ew);
+
+  /* Pts + frequency */
+  var g2=document.createElement('div');g2.className='g2';
+  var pw=mkFld('คะแนนที่ได้');
+  var pi=document.createElement('input');pi.type='number';pi.value=f.pts;pi.min=1;pi.max=99;
+  pi.addEventListener('input',function(){cfg.foods[i].pts=+this.value;});
+  pw.appendChild(pi);
+
+  var fw=mkFld('ความถี่ในเกมส์');
+  var fs=document.createElement('select');
+  [['1','บ่อยมาก'],['2','บ่อย'],['3','ปกติ'],['4','น้อย']].forEach(function(v){
+    var o=document.createElement('option');o.value=v[0];o.textContent=v[1];
+    if(f.w==v[0])o.selected=true;fs.appendChild(o);
+  });
+  fs.addEventListener('change',function(){cfg.foods[i].w=+this.value;});
+  fw.appendChild(fs);
+  g2.appendChild(pw);g2.appendChild(fw);card.appendChild(g2);
+
+  /* Size slider */
+  var sw=mkFld('ขนาดในเกมส์');
+  var szrow=document.createElement('div');szrow.className='szrow';
+  var szval=document.createElement('span');szval.className='szval';szval.textContent=f.size+'px';
+  szrow.innerHTML='<span>เล็ก 40px</span>';szrow.appendChild(szval);
+  var tmp=document.createElement('span');tmp.textContent='ใหญ่ 120px';szrow.appendChild(tmp);
+  sw.appendChild(szrow);
+  var sl=document.createElement('input');sl.type='range';sl.min=40;sl.max=120;sl.value=f.size;
+  sl.addEventListener('input',function(){
+    cfg.foods[i].size=+this.value;
+    szval.textContent=this.value+'px';
+    updateDemo(demoEl,cfg.foods[i]);
+  });
+  sw.appendChild(sl);
+  var demoEl=document.createElement('div');demoEl.className='demo';
+  updateDemo(demoEl,f);
+  sw.appendChild(demoEl);
+  card.appendChild(sw);
+
+  /* Toggle */
+  var tr=document.createElement('div');tr.className='togrow';
+  tr.innerHTML='<span>เปิดใช้งานในเกมส์</span>';
+  var tl=document.createElement('label');tl.className='tog';
+  var ti=document.createElement('input');ti.type='checkbox';if(f.active!==false)ti.checked=true;
+  ti.addEventListener('change',function(){
+    cfg.foods[i].active=this.checked;
+    card.className='fc '+(this.checked?'active':'inactive');
+  });
+  var ts=document.createElement('span');
+  tl.appendChild(ti);tl.appendChild(ts);tr.appendChild(tl);card.appendChild(tr);
+
+  return card;
+}
+
+function mkFld(labelTxt){
+  var d=document.createElement('div');d.className='fld';
+  var l=document.createElement('label');l.textContent=labelTxt;
+  d.appendChild(l);return d;
+}
+
+function updateDemo(el,food){
+  el.innerHTML='';
+  if(food.img&&food.img.startsWith('data:')){
+    var img=document.createElement('img');
+    img.src=food.img;
+    img.style.cssText='width:'+food.size+'px;height:'+food.size+'px;object-fit:cover;border-radius:8px';
+    el.appendChild(img);
+  }else{
+    var sp=document.createElement('span');
+    sp.textContent=food.emoji;sp.style.fontSize=food.size+'px';sp.style.lineHeight='1';
+    el.appendChild(sp);
+  }
+}
+
+function addFood(){
+  cfg.foods.push({id:mkid(),emoji:'🍽',name:'เมนูใหม่',pts:8,size:60,w:2,img:'',active:true});
+  renderFoods();
+  setTimeout(function(){
+    var cards=document.querySelectorAll('.fc');
+    if(cards.length)cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
+function delFood(i){
+  if(!confirm('ลบ "'+cfg.foods[i].name+'"?'))return;
+  cfg.foods.splice(i,1);renderFoods();
+}
+
+/* ── REWARDS ── */
+function renderRewards(){
+  var el=document.getElementById('rl');el.innerHTML='';
+  cfg.rewards.forEach(function(r,i){
+    var div=document.createElement('div');
+    div.className='re '+(r.active?'on':'');
+
+    var dx=document.createElement('button');dx.className='del-x';dx.textContent='✕';
+    dx.addEventListener('click',function(){delReward(i);});
+    div.appendChild(dx);
+
+    var hd=document.createElement('div');hd.className='re-hd';
+    var ico=document.createElement('div');ico.className='ico-btn';ico.textContent=r.icon;ico.id='rico'+i;
+    ico.addEventListener('click',function(){
+      var idx=ICONS.indexOf(cfg.rewards[i].icon);
+      cfg.rewards[i].icon=ICONS[(idx+1)%ICONS.length];
+      this.textContent=cfg.rewards[i].icon;
+    });
+    var nm=document.createElement('input');nm.className='re-nm';nm.value=r.name;nm.placeholder='ชื่อรางวัล';
+    nm.addEventListener('input',function(){cfg.rewards[i].name=this.value;});
+    var tl=document.createElement('label');tl.className='tog';tl.style.marginLeft='8px';
+    var ti=document.createElement('input');ti.type='checkbox';if(r.active)ti.checked=true;
+    ti.addEventListener('change',function(){cfg.rewards[i].active=this.checked;div.className='re '+(this.checked?'on':'');});
+    var ts=document.createElement('span');tl.appendChild(ti);tl.appendChild(ts);
+    hd.appendChild(ico);hd.appendChild(nm);hd.appendChild(tl);div.appendChild(hd);
+
+    var g3=document.createElement('div');g3.className='g3';
+    function mkN(lbl,val,key,mono){
+      var w=mkFld(lbl);var inp=document.createElement('input');
+      inp.type='number';inp.value=val;inp.min=1;if(mono)inp.style.fontFamily='monospace';
+      inp.addEventListener('input',function(){cfg.rewards[i][key]=+this.value;});
+      w.appendChild(inp);return w;
+    }
+    g3.appendChild(mkN('คะแนนที่ต้องการ',r.pts,'pts'));
+    var cw=mkFld('รหัสคูปอง');var ci=document.createElement('input');
+    ci.value=r.coupon;ci.style.fontFamily='monospace';ci.style.letterSpacing='.04em';
+    ci.addEventListener('input',function(){cfg.rewards[i].coupon=this.value.toUpperCase();this.value=this.value.toUpperCase();});
+    cw.appendChild(ci);g3.appendChild(cw);
+    g3.appendChild(mkN('หมดอายุ (วัน)',r.expDays,'expDays'));
+    div.appendChild(g3);
+
+    var dw=mkFld('คำอธิบาย');dw.style.marginTop='8px';
+    var di=document.createElement('input');di.value=r.desc;
+    di.addEventListener('input',function(){cfg.rewards[i].desc=this.value;});
+    dw.appendChild(di);div.appendChild(dw);
+
+    var info=document.createElement('div');
+    info.style.cssText='margin-top:8px;font-size:11px;color:#8a6a40;display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+    info.innerHTML='<span class="pill">'+r.pts+' pt</span>→<span style="font-family:monospace;color:#f5c842">'+r.coupon+'</span><span style="color:#e57373">⏰ '+r.expDays+' วัน</span>';
+    div.appendChild(info);
+    el.appendChild(div);
+  });
+}
+function addReward(){
+  cfg.rewards.push({pts:50,icon:'🎁',name:'รางวัลใหม่',desc:'คำอธิบาย',coupon:'AMRIN-NEW',expDays:14,active:true});
+  renderRewards();
+}
+function delReward(i){if(!confirm('ลบรางวัลนี้?'))return;cfg.rewards.splice(i,1);renderRewards();}
+
+/* ── SAVE ── */
+function saveCfg(){
+  try{
+    localStorage.setItem(CKEY,JSON.stringify(cfg));
+    toast('บันทึกสำเร็จ! เกมส์จะใช้เมนูใหม่ทันที ✅');
+  }catch(e){
+    toast(e.name==='QuotaExceededError'?'พื้นที่เต็ม! ลองลดจำนวนรูปภาพ':'Error: '+e.message,'bad');
+  }
+}
+
+/* ── PLAYERS ── */
+function loadPlayers(){
+  var rows=[],cp=0,us=0;
+  for(var k in localStorage){
+    if(k.indexOf('amrin_player_')===0){
+      try{
+        var p=JSON.parse(localStorage.getItem(k));
+        var cps=p.coupons||[];cp+=cps.length;us+=cps.filter(function(c){return c.used;}).length;
+        rows.push('<tr><td>'+p.name+'</td><td class="uid" title="'+p.uid+'">'+p.uid+'</td>'
+          +'<td><span class="pill">'+p.totalPts+' pt</span></td>'
+          +'<td>'+cps.map(function(c){
+            var now=new Date(),exp=new Date(c.earnedAt);exp.setDate(exp.getDate()+(c.expDays||30));
+            var cls=c.used?'u':now>exp?'e':'';
+            return '<span class="chip '+cls+'">'+c.code+'</span>';
+          }).join('')+'</td></tr>');
+      }catch(e){}
+    }
+  }
+  document.getElementById('pb').innerHTML=rows.length?rows.join(''):'<tr><td colspan="4" style="color:#8a6a40;text-align:center;padding:20px">ยังไม่มีผู้เล่น</td></tr>';
+  document.getElementById('sp').textContent=rows.length;
+  document.getElementById('sc').textContent=cp;
+  document.getElementById('su').textContent=us;
+}
+
+/* ── TOAST ── */
+var _tt=null;
+function toast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.style.background=type==='bad'?'#c0392b':'#1D9E75';
+  el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){el.classList.remove('show');},2800);
+}
+
+/* ── LOCK ── */
+function checkPass(){
+  var stored=localStorage.getItem(PKEY)||'amrin2569';
+  var inp=document.getElementById('pinp');
+  if(inp.value===stored){
+    document.getElementById('lock').style.display='none';
+    document.getElementById('mc').style.display='';
+    try{var d=JSON.parse(localStorage.getItem(CKEY));if(d)cfg=d;}catch(e){}
+    renderFoods();renderRewards();loadPlayers();
+  }else{
+    inp.style.borderColor='#e74c3c';inp.value='';
+    setTimeout(function(){inp.style.borderColor='';},1000);
+  }
+}
+
+/* ── WIRE BUTTONS ── */
+document.getElementById('lbtn').addEventListener('click',checkPass);
+document.getElementById('pinp').addEventListener('keydown',function(e){if(e.key==='Enter')checkPass();});
+document.getElementById('add-food').addEventListener('click',addFood);
+document.getElementById('add-rew').addEventListener('click',addReward);
+document.getElementById('savebtn').addEventListener('click',saveCfg);
+document.getElementById('refbtn').addEventListener('click',loadPlayers);
+document.getElementById('chgpass').addEventListener('click',function(){
+  var n=document.getElementById('np').value,c=document.getElementById('cp2').value;
+  if(!n){toast('กรุณาใส่รหัสผ่านใหม่','bad');return;}
+  if(n!==c){toast('รหัสผ่านไม่ตรงกัน','bad');return;}
+  localStorage.setItem(PKEY,n);
+  document.getElementById('np').value='';document.getElementById('cp2').value='';
+  toast('เปลี่ยนรหัสผ่านสำเร็จ!');
+});
+</script>
+</body>
+</html>

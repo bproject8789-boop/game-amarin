@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<title>อมรินทร์ — ฟันอาหาร!</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0400;font-family:'Mitr',sans-serif}
+canvas{position:absolute;inset:0}
+#ui{position:absolute;inset:0;pointer-events:none}
+.hud{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;position:absolute;top:0;left:0;right:0}
+.score-box{background:rgba(0,0,0,.6);border:1px solid rgba(255,180,0,.3);border-radius:12px;padding:6px 14px;text-align:center}
+.score-label{font-size:10px;color:#8a6a40}
+.score-val{font-size:26px;font-weight:700;color:#FFD000}
+.heart{font-size:20px;transition:all .3s}
+.heart.lost{opacity:.2;transform:scale(.8)}
+.targets{position:absolute;top:75px;left:0;right:0;display:flex;justify-content:center;gap:5px;padding:0 10px;flex-wrap:wrap}
+.tgt{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:3px 8px;font-size:10px;color:#8a6a40;display:flex;align-items:center;gap:3px;transition:all .3s;white-space:nowrap}
+.tgt.reached{border-color:#FFD000;color:#FFD000;background:rgba(255,208,0,.1)}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);pointer-events:auto;transition:opacity .35s;overflow-y:auto}
+.screen.hide{opacity:0;pointer-events:none}
+.brand-title{font-family:'Noto Serif Thai',serif;font-size:28px;color:#FFD000;text-shadow:0 0 20px rgba(255,180,0,.6);text-align:center;line-height:1.1}
+.brand-sub{font-size:13px;color:#8a6a40;margin-top:4px;text-align:center}
+.deco-line{width:160px;height:1.5px;background:linear-gradient(90deg,transparent,#FFD000,transparent);margin:12px auto}
+.how-to{background:rgba(255,180,0,.06);border:1px solid rgba(255,180,0,.2);border-radius:12px;padding:12px 16px;margin:10px 0;max-width:300px;width:100%}
+.how-to p{font-size:12px;color:#c8a060;line-height:1.7;text-align:center}
+.lv-sel{display:flex;gap:8px;margin:8px 0;max-width:320px;width:100%}
+.lv-btn{flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid rgba(255,180,0,.3);background:rgba(255,255,255,.04);color:#8a6a40;font-size:12px;font-weight:600;cursor:pointer;font-family:'Mitr',sans-serif;transition:all .2s;text-align:center;line-height:1.4}
+.lv-btn.on{border-color:#FF6B00;background:rgba(255,107,0,.12);color:#FFD000}
+.btn-fire{padding:15px 44px;background:linear-gradient(135deg,#bf360c,#E64A19);border:none;border-radius:16px;color:#fff;font-size:18px;font-weight:800;font-family:'Noto Serif Thai',serif;cursor:pointer;box-shadow:0 6px 28px rgba(230,74,25,.5);margin-top:8px;pointer-events:auto;transition:all .2s}
+.btn-fire:active{transform:scale(.96)}
+.login-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,180,0,.3);border-radius:16px;padding:20px;max-width:320px;width:100%;text-align:center;margin-top:12px}
+.login-box h3{color:#FFD000;font-size:1rem;margin-bottom:12px}
+.inp{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,180,0,.3);border-radius:10px;padding:.65rem .9rem;color:#fff8f0;font-size:.92rem;font-family:'Mitr',sans-serif;outline:none;margin-bottom:8px}
+.inp::placeholder{color:#5a4020}
+.profile-bar{background:rgba(255,180,0,.08);border:1px solid rgba(255,180,0,.2);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:10px;max-width:320px;width:100%;margin-top:8px}
+.btn-sec{padding:10px 20px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.06);color:#c8a060;font-size:13px;font-weight:600;cursor:pointer;font-family:'Mitr',sans-serif;transition:all .2s}
+.combo-flash{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);font-family:'Noto Serif Thai',serif;font-size:30px;font-weight:700;pointer-events:none;opacity:0;text-align:center;transition:opacity .3s,transform .3s;white-space:nowrap}
+.rc{background:rgba(255,208,0,.08);border:1px solid rgba(255,208,0,.2);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px}
+.rc.got{border-color:#FFD000;background:rgba(255,208,0,.15)}
+.rc.locked{opacity:.4}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="hud" id="hud" style="display:none">
+    <div class="score-box"><div class="score-label">คะแนน</div><div class="score-val" id="hud-score">0</div></div>
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:60px;height:60px">
+      <canvas id="tc" width="60" height="60" style="position:absolute;inset:0"></canvas>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span id="ttxt" style="font-size:17px;font-weight:700;color:#FFD000;font-family:'Noto Serif Thai',serif">60</span></div>
+    </div>
+    <div class="score-box"><div class="score-label">ชีวิต</div><div style="display:flex;gap:3px"><span class="heart" id="h0">❤️</span><span class="heart" id="h1">❤️</span><span class="heart" id="h2">❤️</span></div></div>
+  </div>
+  <div class="targets" id="targets" style="display:none"></div>
+  <div class="combo-flash" id="cf"></div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="scr-login">
+    <div class="brand-title">ฟันอาหาร<br>อมรินทร์!</div>
+    <div class="brand-sub">หนองใหญ่ • ของแซ่บทุกจาน</div>
+    <div class="deco-line"></div>
+    <div id="liff-loading" style="text-align:center;margin-top:20px">
+      <div style="font-size:44px">⏳</div>
+      <div style="font-size:13px;color:#8a6a40;margin-top:10px">กำลังเชื่อมต่อ LINE...</div>
+    </div>
+    <div class="login-box" id="manual-login" style="display:none">
+      <h3>🔐 เข้าสู่ระบบ</h3>
+      <button class="btn-fire" id="line-oauth-btn" style="width:100%;font-size:15px;padding:12px;background:linear-gradient(135deg,#00B900,#00E000);margin-bottom:12px" onclick="liffLogin()">💬 เข้าสู่ระบบด้วย LINE</button>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+        <span style="font-size:11px;color:#5a4020">หรือกรอกเอง</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+      </div>
+      <input class="inp" id="line-uid" placeholder="Line User ID (Uxxxxxxxx...)" maxlength="40">
+      <input class="inp" id="line-name" placeholder="ชื่อใน Line ของคุณ" maxlength="20">
+      <button class="btn-fire" style="width:100%;font-size:15px;padding:12px" onclick="doLogin()">เข้าร่วม</button>
+      <div style="margin-top:10px;font-size:10px;color:#5a4020">* ใช้ยืนยันว่าเป็นลูกค้าจริง</div>
+    </div>
+  </div>
+
+  <!-- TITLE -->
+  <div class="screen hide" id="scr-title">
+    <div class="brand-title">ฟันอาหาร<br>อมรินทร์!</div>
+    <div class="brand-sub">หนองใหญ่ • ของแซ่บทุกจาน</div>
+    <div class="deco-line"></div>
+    <div class="profile-bar">
+      <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#FF6B00,#FFD000);display:flex;align-items:center;justify-content:center;position:relative">
+        <span id="profile-avatar-em" style="font-size:18px">🧑</span>
+        <img id="profile-avatar" src="" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#FFD000" id="p-name">ผู้เล่น</div>
+        <div style="font-size:11px;color:#8a6a40" id="p-pts">คะแนนสะสม: 0</div>
+        <div style="font-size:10px;color:#27ae60;margin-top:1px" id="line-verified" style="display:none">✓ ยืนยันตัวตนด้วย LINE แล้ว</div>
+      </div>
+    </div>
+    <div id="menu-preview" style="display:flex;gap:6px;justify-content:center;margin:12px 0;flex-wrap:wrap;max-width:300px"></div>
+    <div class="how-to"><p>ลากนิ้วฟันอาหารที่ตกลงมา<br>ระวัง! ห้ามโดนระเบิด 💣<br>ฟันให้ถึงเป้ารับส่วนลดทันที!</p></div>
+    <div style="font-size:12px;color:#8a6a40;margin-bottom:6px">เลือกระดับความยาก</div>
+    <div class="lv-sel">
+      <button class="lv-btn on" onclick="selLv(this,'easy')">😊<br>ง่าย<br><span style="font-size:10px;color:#5a4020">60วิ</span></button>
+      <button class="lv-btn" onclick="selLv(this,'normal')">😤<br>ปกติ<br><span style="font-size:10px;color:#5a4020">45วิ</span></button>
+      <button class="lv-btn" onclick="selLv(this,'hard')">🔥<br>ยาก<br><span style="font-size:10px;color:#5a4020">35วิ</span></button>
+    </div>
+    <button class="btn-fire" onclick="startGame()">🔪 เริ่มฟัน!</button>
+    <button class="btn-sec" style="margin-top:8px;pointer-events:auto" onclick="viewCoupons()">🎟 คูปองของฉัน</button>
+  </div>
+
+  <!-- COUPON -->
+  <div class="screen hide" id="scr-coupon">
+    <div class="brand-title" style="font-size:22px">🎟 คูปองของฉัน</div>
+    <div class="deco-line"></div>
+    <div id="my-coupons" style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:8px;margin:10px 0;overflow-y:auto;max-height:60vh"></div>
+    <button class="btn-sec" style="pointer-events:auto;margin-top:8px" onclick="goTitle()">← กลับ</button>
+  </div>
+
+  <!-- RESULT -->
+  <div class="screen hide" id="scr-result">
+    <div style="font-size:52px;margin-bottom:8px" id="ri">🏆</div>
+    <div style="font-family:'Noto Serif Thai',serif;font-size:24px;color:#FFD000;text-align:center" id="rt">ยอดเยี่ยม!</div>
+    <div style="font-size:48px;font-weight:700;color:#fff;text-align:center;line-height:1" id="rs">0</div>
+    <div style="font-size:13px;color:#8a6a40;text-align:center">คะแนน</div>
+    <div id="rc-list" style="display:flex;flex-direction:column;gap:6px;margin:12px 0;width:100%;max-width:320px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;pointer-events:auto">
+      <button class="btn-sec" onclick="goTitle()">หน้าหลัก</button>
+      <button class="btn-fire" style="font-size:15px;padding:12px 26px;margin-top:0" onclick="startGame()">เล่นอีก! 🔪</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+function getAdminCfg(){
+  try{return JSON.parse(localStorage.getItem('amrin_admin_cfg'))||defCfg();}catch(e){return defCfg();}
+}
+function defCfg(){
+  return{
+    foods:[
+      {id:'f1',emoji:'🥩',name:'เนื้อน่องลาย',pts:15,size:70,w:1,img:''},
+      {id:'f2',emoji:'🍖',name:'หมูกรอบ',pts:12,size:64,w:2,img:''},
+      {id:'f3',emoji:'🌶',name:'พริกสด',pts:5,size:46,w:3,img:''},
+      {id:'f4',emoji:'🍗',name:'ไก่ย่าง',pts:10,size:62,w:2,img:''},
+      {id:'f5',emoji:'🥗',name:'ส้มตำ',pts:8,size:60,w:2,img:''},
+      {id:'f6',emoji:'🍲',name:'ต้มแซ่บ',pts:18,size:70,w:1,img:''},
+    ],
+    rewards:[
+      {pts:30,icon:'🎟',name:'ส่วนลด 5 บาท',desc:'ใช้ได้ทุกเมนู',coupon:'AMRIN-5THB',expDays:30,active:true},
+      {pts:60,icon:'🍖',name:'ส่วนลด 15 บาท',desc:'เมนูหลักทุกชนิด',coupon:'AMRIN-15THB',expDays:14,active:true},
+      {pts:100,icon:'🥩',name:'ส่วนลด 30 บาท',desc:'ขั้นต่ำ 100 บาท',coupon:'AMRIN-30THB',expDays:7,active:true},
+      {pts:150,icon:'👑',name:'ฟรี! เมนูตามใจ',desc:'มูลค่าสูงสุด 50บ',coupon:'AMRIN-FREE50',expDays:3,active:true},
+    ]
+  };
+}
+function getFoods(){return(getAdminCfg().foods||[]);}
+
+// ── IMAGE CACHE ──
+var IMGS={};
+function getImg(f){
+  if(!f||!f.img||!f.img.startsWith('data:'))return null;
+  if(!IMGS[f.id]||IMGS[f.id].src!==f.img){var im=new Image();im.src=f.img;IMGS[f.id]=im;}
+  return IMGS[f.id];
+}
+
+// ── PLAYER ──
+var PL={uid:'',name:'',totalPts:0,coupons:[]};
+function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)PL=d;}catch(e){}}
+function savePL(){localStorage.setItem('amrin_player_'+PL.uid,JSON.stringify(PL));}
+
+// ── LIFF CONFIG — ใส่ LIFF ID ตรงนี้หลังสร้างใน LINE Developers ──
+var LIFF_ID = 'YOUR_LIFF_ID_HERE';
+
+// ── LIFF INIT ──
+function initLiff(){
+  if(!LIFF_ID||LIFF_ID==='YOUR_LIFF_ID_HERE'){
+    // ยังไม่ได้ตั้ง LIFF ID — แสดง manual login
+    showManualLogin();return;
+  }
+  liff.init({liffId:LIFF_ID})
+    .then(function(){
+      if(!liff.isLoggedIn()){
+        // ไม่ได้ login — redirect ไปหน้า LINE login
+        liff.login();
+        return;
+      }
+      // Login สำเร็จ — ดึง profile อัตโนมัติ
+      return liff.getProfile();
+    })
+    .then(function(profile){
+      if(!profile)return;
+      var uid=profile.userId;
+      var name=profile.displayName;
+      var pic=profile.pictureUrl||'';
+      loginWithProfile(uid,name,pic);
+    })
+    .catch(function(err){
+      console.warn('LIFF error:',err);
+      showManualLogin();
+    });
+}
+
+function liffLogin(){
+  if(typeof liff!=='undefined'&&LIFF_ID&&LIFF_ID!=='YOUR_LIFF_ID_HERE'){
+    liff.login();
+  }else{
+    showManualLogin();
+  }
+}
+
+function showManualLogin(){
+  document.getElementById('liff-loading').style.display='none';
+  document.getElementById('manual-login').style.display='';
+  // ซ่อนปุ่ม LINE OAuth ถ้าไม่มี LIFF ID
+  if(!LIFF_ID||LIFF_ID==='YOUR_LIFF_ID_HERE'){
+    var btn=document.getElementById('line-oauth-btn');
+    if(btn)btn.style.display='none';
+  }
+}
+
+function loginWithProfile(uid,name,pic){
+  PL={uid:uid,name:name,totalPts:0,coupons:[],pic:pic||''};
+  loadPL(uid);PL.uid=uid;PL.name=name;
+  if(pic)PL.pic=pic;
+  // อัปเดต profile bar
+  document.getElementById('p-name').textContent=PL.name;
+  document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
+  // แสดงรูป profile ถ้ามี
+  var av=document.getElementById('profile-avatar');
+  if(av&&pic){av.src=pic;av.style.display='block';}
+  var avem=document.getElementById('profile-avatar-em');
+  if(avem&&pic)avem.style.display='none';
+  var vbadge=document.getElementById('line-verified');
+  if(vbadge&&pic)vbadge.style.display='block';// มีรูป = login ด้วย LINE จริง
+  buildMenuPreview();
+  hideAll();
+  document.getElementById('scr-title').classList.remove('hide');
+}
+
+function doLogin(){
+  var uid=document.getElementById('line-uid').value.trim();
+  var name=document.getElementById('line-name').value.trim();
+  if(!uid){alert('กรุณาใส่ Line User ID');return;}
+  if(!name){alert('กรุณาใส่ชื่อของคุณ');return;}
+  loginWithProfile(uid,name,'');
+}
+
+function buildMenuPreview(){
+  var el=document.getElementById('menu-preview');
+  el.innerHTML=getFoods().slice(0,6).map(function(f){
+    var im=getImg(f);
+    if(f.img&&f.img.startsWith('data:')){
+      return '<div style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid rgba(255,180,0,.4)"><img src="'+f.img+'" style="width:100%;height:100%;object-fit:cover"></div>';
+    }
+    return '<div style="font-size:30px;line-height:1">'+f.emoji+'</div>';
+  }).join('');
+}
+
+// ── CANVAS ──
+var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+var LV={easy:{time:60,spawn:1.4,speed:.5,bomb:.06},normal:{time:45,spawn:1.0,speed:.7,bomb:.1},hard:{time:35,spawn:.7,speed:.95,bomb:.14}};
+var level='easy',active=false,score=0,lives=3,tLeft=60,combo=0;
+var spawnT=0,items=[],trail=[],animId=null,lastT=0,px=0,py=0,ppx=0,ppy=0,pdown=false,shakeT=0;
+
+function randFood(){
+  var fs=getFoods();if(!fs.length)return{id:'x',emoji:'🥩',name:'เนื้อ',pts:10,size:60,w:1,img:''};
+  var pool=[];fs.forEach(function(f){for(var i=0;i<(f.w||1);i++)pool.push(f);});
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function doSpawn(bomb){
+  var x=60+Math.random()*(W-120),cfg=LV[level];
+  var vy=-(5+Math.random()*3)*(0.8+cfg.speed),vx=(Math.random()-.5)*2;
+  var sz=bomb?56:Math.max(44,Math.min(100,(bomb?56:randFood().size||60)));
+  if(bomb){
+    items.push({type:'bomb',x:x,y:H+80,vx:vx,vy:vy,rot:0,vrot:(Math.random()-.5)*.12,size:sz,sliced:false,fade:1,pieces:[]});
+  }else{
+    var f=randFood();
+    sz=Math.max(44,Math.min(100,f.size||60));
+    items.push({type:'food',food:f,emoji:f.emoji,name:f.name,pts:f.pts,size:sz,x:x,y:H+80,vx:vx,vy:vy,rot:Math.random()*Math.PI*2,vrot:(Math.random()-.5)*.1,sliced:false,fade:1,pieces:[],sa:0,sr:0,sc:'#c0392b'});
+  }
+}
+
+function hitTest(it){
+  var r=it.size/2+10;
+  if(Math.hypot(px-it.x,py-it.y)<r)return true;
+  var ex=px-ppx,ey=py-ppy,len=Math.hypot(ex,ey);
+  if(len<1)return false;
+  var t=Math.max(0,Math.min(1,((ppx-it.x)*ex+(ppy-it.y)*ey)/(len*len)));
+  return Math.hypot((ppx-it.x)+ex*t,(ppy-it.y)+ey*t)<r;
+}
+
+function doSlice(it){
+  if(it.sliced)return;it.sliced=true;
+  if(it.type==='bomb'){lives=Math.max(0,lives-1);document.getElementById('h'+lives).classList.add('lost');combo=0;shakeT=.4;showFlash('💥 โดนระเบิด!','#e53935');if(lives<=0)setTimeout(endGame,400);return;}
+  combo++;var pts=it.pts;if(combo>=5)pts*=3;else if(combo>=3)pts*=2;
+  score+=pts;document.getElementById('hud-score').textContent=score;refreshTgts();
+  if(combo>=5)showFlash('🔥 ULTRA x'+combo,'#FF6B00');else if(combo>=3)showFlash('⚡ COMBO x'+combo,'#FFD000');else showFlash('+'+pts,'rgba(255,255,255,.9)');
+  it.sc=['#c0392b','#e67e22','#27ae60','#8e44ad'][Math.floor(Math.random()*4)];it.sr=it.size*.4;it.sa=.7;
+  for(var i=0;i<2;i++)it.pieces.push({x:it.x,y:it.y,vx:(Math.random()-.5)*5+(i?2:-2),vy:-3-Math.random()*2,rot:it.rot,vrot:(Math.random()-.5)*.25,alpha:1,s:it.size,side:i,food:it.food,emoji:it.emoji});
+}
+
+var _ft=null;
+function showFlash(t,c){var el=document.getElementById('cf');el.textContent=t;el.style.color=c||'#FFD000';el.style.opacity=1;el.style.transform='translate(-50%,-50%) scale(1.15)';clearTimeout(_ft);_ft=setTimeout(function(){el.style.opacity=0;el.style.transform='translate(-50%,-50%) scale(1)';},700);}
+
+function drawArc(){var tc=document.getElementById('tc').getContext('2d'),p=tLeft/LV[level].time,col=p>.4?'#FFD000':p>.2?'#FF6B00':'#e53935';tc.clearRect(0,0,60,60);tc.beginPath();tc.arc(30,30,24,0,Math.PI*2);tc.strokeStyle='rgba(255,255,255,.1)';tc.lineWidth=4;tc.stroke();tc.beginPath();tc.arc(30,30,24,-Math.PI/2,-Math.PI/2+Math.PI*2*p);tc.strokeStyle=col;tc.lineWidth=4;tc.lineCap='round';tc.stroke();}
+
+function buildTgts(){
+  document.getElementById('targets').innerHTML=getAdminCfg().rewards.filter(function(r){return r.active;}).map(function(r,i){return '<div class="tgt" id="tgt'+i+'">'+r.icon+' '+r.pts+'pt→'+r.name+'</div>';}).join('');
+}
+function refreshTgts(){
+  getAdminCfg().rewards.filter(function(r){return r.active;}).forEach(function(r,i){var el=document.getElementById('tgt'+i);if(el)el.className='tgt'+(score>=r.pts?' reached':'');});
+}
+
+// ── DRAW ITEM ──
+function drawFoodItem(ctx,food,size,x,y,rot,alpha,flip){
+  ctx.save();
+  ctx.globalAlpha=alpha!=null?alpha:1;
+  ctx.translate(x,y);ctx.rotate(rot);
+  if(flip)ctx.scale(-1,1);
+  var im=getImg(food);
+  if(im&&im.complete&&im.naturalWidth>0){
+    var r=size/2;
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.clip();
+    ctx.drawImage(im,-r,-r,size,size);
+  }else{
+    ctx.font=size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(food?food.emoji:'🥩',0,0);
+  }
+  ctx.restore();
+  // Score label (only full-size, not pieces)
+  if(!flip&&food){
+    ctx.save();ctx.globalAlpha=alpha!=null?alpha:1;
+    ctx.translate(x,y);
+    ctx.font='bold 10px Mitr,sans-serif';ctx.fillStyle='rgba(255,220,100,.9)';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText('+'+food.pts,0,size/2+2);
+    ctx.restore();
+  }
+}
+
+var G=4.5;
+function loop(ts){
+  if(!active)return;
+  var dt=Math.min((ts-lastT)/1000,.05);lastT=ts;
+  if(shakeT>0)shakeT-=dt;
+  var ox=shakeT>0?(Math.random()-.5)*10:0,oy=shakeT>0?(Math.random()-.5)*8:0;
+  ctx.clearRect(0,0,W,H);
+  var bg=ctx.createRadialGradient(W/2,H*.65,0,W/2,H*.65,H);bg.addColorStop(0,'#1c0a01');bg.addColorStop(1,'#050100');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  if(trail.length>1){for(var ti=1;ti<trail.length;ti++){var a=ti/trail.length;ctx.beginPath();ctx.moveTo(trail[ti-1].x+ox,trail[ti-1].y+oy);ctx.lineTo(trail[ti].x+ox,trail[ti].y+oy);ctx.strokeStyle='rgba(255,240,180,'+a*.75+')';ctx.lineWidth=a*6;ctx.lineCap='round';ctx.stroke();}if(trail.length>20)trail=trail.slice(-20);}
+  spawnT+=dt;
+  if(spawnT>=LV[level].spawn){spawnT=0;doSpawn(Math.random()<LV[level].bomb);if(Math.random()<.4)doSpawn(Math.random()<LV[level].bomb);}
+  items=items.filter(function(it){
+    if(!it.sliced){it.x+=it.vx;it.vy+=G*dt;it.y+=it.vy;it.rot+=it.vrot;if(pdown&&hitTest(it))doSlice(it);}
+    else it.fade-=dt*2;
+    if(!it.sliced&&it.y>H+90){if(it.type==='food'){lives=Math.max(0,lives-1);document.getElementById('h'+lives).classList.add('lost');combo=0;if(lives<=0)setTimeout(endGame,300);}return false;}
+    if(it.sliced&&it.fade<=0)return false;
+    if(it.sliced&&it.sa>0){it.sr+=4;it.sa-=dt*3;ctx.save();ctx.globalAlpha=Math.max(0,it.sa);ctx.beginPath();ctx.arc(it.x+ox,it.y+oy,it.sr,0,Math.PI*2);ctx.fillStyle=it.sc;ctx.fill();ctx.restore();}
+    if(!it.sliced){
+      if(it.type==='bomb'){ctx.save();ctx.translate(it.x+ox,it.y+oy);ctx.rotate(it.rot);ctx.font=it.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('💣',0,0);ctx.restore();}
+      else drawFoodItem(ctx,it.food,it.size,it.x+ox,it.y+oy,it.rot,1,false);
+    }
+    it.pieces=it.pieces.filter(function(p){
+      p.x+=p.vx;p.vy=(p.vy||0)+G*dt*1.3;p.y+=p.vy;p.rot+=p.vrot;p.alpha-=dt*1.5;
+      if(p.alpha<=0)return false;
+      drawFoodItem(ctx,p.food,p.s*.5,p.x+ox,p.y+oy,p.rot,p.alpha,p.side===0);
+      return true;
+    });
+    return true;
+  });
+  tLeft=Math.max(0,tLeft-dt);document.getElementById('ttxt').textContent=Math.ceil(tLeft);drawArc();
+  if(tLeft<=0){endGame();return;}
+  animId=requestAnimationFrame(loop);
+}
+
+cv.addEventListener('mousedown',function(e){pdown=true;ppx=px=e.clientX;ppy=py=e.clientY;});
+cv.addEventListener('mousemove',function(e){if(pdown){ppx=px;ppy=py;px=e.clientX;py=e.clientY;trail.push({x:px,y:py});}});
+cv.addEventListener('mouseup',function(){pdown=false;trail=[];});
+cv.addEventListener('touchstart',function(e){e.preventDefault();pdown=true;var t=e.touches[0];ppx=px=t.clientX;ppy=py=t.clientY;},{passive:false});
+cv.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];ppx=px;ppy=py;px=t.clientX;py=t.clientY;trail.push({x:px,y:py});},{passive:false});
+cv.addEventListener('touchend',function(e){e.preventDefault();pdown=false;trail=[];},{passive:false});
+
+function selLv(btn,lv){document.querySelectorAll('.lv-btn').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');level=lv;}
+function hideAll(){document.querySelectorAll('.screen').forEach(function(s){s.classList.add('hide');});}
+
+function startGame(){
+  IMGS={};score=0;lives=3;combo=0;tLeft=LV[level].time;items=[];trail=[];spawnT=0;lastT=0;shakeT=0;
+  [0,1,2].forEach(function(i){document.getElementById('h'+i).classList.remove('lost');});
+  document.getElementById('hud-score').textContent='0';
+  hideAll();
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('targets').style.display='flex';
+  buildTgts();refreshTgts();active=true;
+  if(animId)cancelAnimationFrame(animId);
+  animId=requestAnimationFrame(function(t){lastT=t;loop(t);});
+}
+
+function expDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});}
+
+function endGame(){
+  active=false;if(animId)cancelAnimationFrame(animId);
+  document.getElementById('hud').style.display='none';document.getElementById('targets').style.display='none';
+  var cfg=getAdminCfg(),nc=[];
+  cfg.rewards.filter(function(r){return r.active&&score>=r.pts;}).forEach(function(r){
+    var already=PL.coupons.some(function(cp){return cp.code===r.coupon&&!cp.used;});
+    if(!already){PL.coupons.push({code:r.coupon,name:r.name,desc:r.desc,icon:r.icon,expDays:r.expDays,earnedAt:new Date().toISOString(),used:false});nc.push(r);}
+  });
+  PL.totalPts=(PL.totalPts||0)+score;
+  document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
+  savePL();
+  document.getElementById('ri').textContent=score>=150?'👑':score>=100?'🏆':score>=60?'🎯':score>=30?'👍':'😅';
+  document.getElementById('rt').textContent=score>=150?'โคตรเก่ง!':score>=100?'ยอดเยี่ยม!':score>=60?'ไม่เลวเลย!':score>=30?'พอใช้ได้!':'ลองอีกครั้ง!';
+  document.getElementById('rs').textContent=score;
+  document.getElementById('rc-list').innerHTML=cfg.rewards.filter(function(r){return r.active;}).map(function(r){
+    var got=score>=r.pts,isNew=nc.some(function(n){return n.coupon===r.coupon;});
+    return '<div class="rc '+(got?'got':'locked')+'">'
+      +'<div style="font-size:20px;width:26px;text-align:center;flex-shrink:0">'+r.icon+'</div>'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#FFD000">'+(isNew?'🆕 ':'')+r.name+'</div>'
+      +'<div style="font-size:10px;color:#8a6a40;margin-top:2px">'+r.desc+'</div>'
+      +(got?'<div style="font-family:monospace;font-size:13px;color:#fff;background:rgba(0,0,0,.4);border-radius:4px;padding:2px 7px;display:inline-block;margin-top:3px;letter-spacing:.1em">'+r.coupon+'</div>'
+           +'<div style="font-size:10px;color:#e57373;margin-top:2px">⏰ หมดอายุ: '+expDate(r.expDays)+'</div>'
+        :'<div style="font-size:10px;color:#5a4020">ต้องการ '+r.pts+' คะแนน</div>')
+      +'</div><div style="font-size:18px">'+(got?'✅':'🔒')+'</div></div>';
+  }).join('');
+  hideAll();document.getElementById('scr-result').classList.remove('hide');
+}
+
+function viewCoupons(){
+  hideAll();
+  var el=document.getElementById('my-coupons'),cps=PL.coupons||[];
+  if(!cps.length){el.innerHTML='<div style="text-align:center;color:#8a6a40;padding:20px">ยังไม่มีคูปอง<br>เล่นเกมส์เพื่อรับคูปอง!</div>';}
+  else el.innerHTML=cps.map(function(cp,i){
+    var now=new Date(),exp=new Date(cp.earnedAt);exp.setDate(exp.getDate()+(cp.expDays||30));
+    var expired=now>exp;var stat=cp.used?'ใช้แล้ว':expired?'หมดอายุ':'ใช้ได้';var sc=cp.used?'#ef9a9a':expired?'#e57373':'#a5d6a7';
+    return '<div style="background:rgba(255,208,0,'+(cp.used||expired?.04:.1)+');border:1px solid rgba(255,208,0,'+(cp.used||expired?.15:.35)+');border-radius:12px;padding:12px;opacity:'+(cp.used||expired?.5:1)+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<span style="font-size:22px">'+cp.icon+'</span>'
+      +'<div><div style="font-size:13px;font-weight:600;color:#FFD000">'+cp.name+'</div><div style="font-size:10px;color:#8a6a40">'+cp.desc+'</div></div>'
+      +'<div style="margin-left:auto;font-size:11px;color:'+sc+'">'+stat+'</div></div>'
+      +'<div style="font-family:monospace;font-size:15px;color:#fff;background:rgba(0,0,0,.4);border-radius:6px;padding:4px 10px;display:inline-block;letter-spacing:.1em">'+cp.code+'</div>'
+      +'<div style="font-size:10px;color:#e57373;margin-top:4px">⏰ หมดอายุ: '+exp.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'})+'</div>'
+      +(!cp.used&&!expired?'<button onclick="useCoupon('+i+')" style="margin-top:8px;padding:5px 14px;background:linear-gradient(135deg,#bf360c,#E64A19);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Mitr,sans-serif">ใช้คูปองนี้</button>':'')
+      +'</div>';
+  }).join('');
+  document.getElementById('scr-coupon').classList.remove('hide');
+}
+function useCoupon(i){if(!confirm('ยืนยันการใช้คูปอง "'+PL.coupons[i].name+'"?'))return;PL.coupons[i].used=true;PL.coupons[i].usedAt=new Date().toISOString();savePL();viewCoupons();}
+function goTitle(){hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');}
+
+// ── START: เรียก LIFF init เมื่อหน้าโหลดเสร็จ ──
+window.addEventListener('DOMContentLoaded',function(){
+  initLiff();
+});
+</script>
+</body>
+</html>
