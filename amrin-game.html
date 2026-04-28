@@ -9,7 +9,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0400;font-family:'Mitr',sans-serif}
-canvas{position:absolute;inset:0;pointer-events:none}
+canvas{position:absolute;inset:0;pointer-events:none;touch-action:none}
 #ui{position:absolute;inset:0;pointer-events:none}
 .hud{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;position:absolute;top:0;left:0;right:0}
 .score-box{background:rgba(0,0,0,.6);border:1px solid rgba(255,180,0,.3);border-radius:12px;padding:6px 14px;text-align:center}
@@ -46,8 +46,8 @@ canvas{position:absolute;inset:0;pointer-events:none}
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="touch-layer" style="position:absolute;inset:0;z-index:0;touch-action:none;display:none"></div>
-<div id="ui">
+<div id="game-touch" style="position:absolute;inset:0;z-index:1;display:none;touch-action:none"></div>
+<div id="ui" style="z-index:3">
   <div class="hud" id="hud" style="display:none">
     <div class="score-box"><div class="score-label">คะแนน</div><div class="score-val" id="hud-score">0</div></div>
     <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:60px;height:60px">
@@ -163,6 +163,9 @@ var LIFF_ID = '2009929388-NnhEcutA';
 function initLiff(){
   if(!LIFF_ID||LIFF_ID==='YOUR_LIFF_ID_HERE'){
     showManualLogin();return;
+  }
+  if(typeof liff==='undefined'){
+    setTimeout(initLiff,500);return;
   }
   liff.init({liffId:LIFF_ID})
     .then(function(){
@@ -361,13 +364,13 @@ function loop(ts){
   animId=requestAnimationFrame(loop);
 }
 
-var tl=document.getElementById('touch-layer');
-tl.addEventListener('mousedown',function(e){pdown=true;ppx=px=e.clientX;ppy=py=e.clientY;});
-tl.addEventListener('mousemove',function(e){if(pdown){ppx=px;ppy=py;px=e.clientX;py=e.clientY;trail.push({x:px,y:py});}});
-tl.addEventListener('mouseup',function(){pdown=false;trail=[];});
-tl.addEventListener('touchstart',function(e){e.preventDefault();pdown=true;var t=e.touches[0];ppx=px=t.clientX;ppy=py=t.clientY;},{passive:false});
-tl.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];ppx=px;ppy=py;px=t.clientX;py=t.clientY;trail.push({x:px,y:py});},{passive:false});
-tl.addEventListener('touchend',function(e){e.preventDefault();pdown=false;trail=[];},{passive:false});
+var gt=document.getElementById('game-touch');
+gt.addEventListener('mousedown',function(e){pdown=true;ppx=px=e.clientX;ppy=py=e.clientY;});
+gt.addEventListener('mousemove',function(e){if(!pdown)return;ppx=px;ppy=py;px=e.clientX;py=e.clientY;trail.push({x:px,y:py});});
+gt.addEventListener('mouseup',function(){pdown=false;trail=[];});
+gt.addEventListener('touchstart',function(e){e.preventDefault();pdown=true;var t=e.touches[0];ppx=px=t.clientX;ppy=py=t.clientY;},{passive:false});
+gt.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];ppx=px;ppy=py;px=t.clientX;py=t.clientY;trail.push({x:px,y:py});},{passive:false});
+gt.addEventListener('touchend',function(e){e.preventDefault();pdown=false;trail=[];},{passive:false});
 
 
 function hideAll(){document.querySelectorAll('.screen').forEach(function(s){s.classList.add('hide');});}
@@ -379,7 +382,7 @@ function startGame(){
   hideAll();
   document.getElementById('hud').style.display='flex';
   document.getElementById('targets').style.display='flex';
-  document.getElementById('touch-layer').style.display='block';
+  document.getElementById('game-touch').style.display='block';
   buildTgts();refreshTgts();active=true;
   if(animId)cancelAnimationFrame(animId);
   animId=requestAnimationFrame(function(t){lastT=t;loop(t);});
@@ -390,7 +393,7 @@ function expDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toLoc
 function endGame(){
   active=false;if(animId)cancelAnimationFrame(animId);
   document.getElementById('hud').style.display='none';document.getElementById('targets').style.display='none';
-  document.getElementById('touch-layer').style.display='none';
+  document.getElementById('game-touch').style.display='none';
   var cfg=getAdminCfg(),nc=[];
   cfg.rewards.filter(function(r){return r.active&&score>=r.pts;}).forEach(function(r){
     var already=PL.coupons.some(function(cp){return cp.code===r.coupon&&!cp.used;});
@@ -439,8 +442,8 @@ function useCoupon(i){if(!confirm('ยืนยันการใช้คูป
 function goTitle(){hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');}
 
 // ── START: เรียก LIFF init เมื่อหน้าโหลดเสร็จ ──
-window.addEventListener('DOMContentLoaded',function(){
-  initLiff();
+window.addEventListener('load',function(){
+  setTimeout(initLiff,300);
 });
 </script>
 </body>
