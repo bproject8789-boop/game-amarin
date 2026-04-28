@@ -193,10 +193,7 @@ function initLiff(){
     })
     .then(function(profile){
       if(!profile)return;
-      var uid=profile.userId;
-      var name=profile.displayName;
-      var pic=profile.pictureUrl||'';
-      loginWithProfile(uid,name,pic);
+      loginWithProfile(profile.userId,profile.displayName,profile.pictureUrl||'');
     })
     .catch(function(err){
       console.warn('LIFF error:',err);
