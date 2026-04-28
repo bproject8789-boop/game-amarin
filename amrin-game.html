@@ -9,7 +9,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0400;font-family:'Mitr',sans-serif}
-canvas{position:absolute;inset:0;pointer-events:none;touch-action:none}
+canvas{position:absolute;inset:0;pointer-events:none;touch-action:none;z-index:0}
 #ui{position:absolute;inset:0;pointer-events:none}
 .hud{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;position:absolute;top:0;left:0;right:0}
 .score-box{background:rgba(0,0,0,.6);border:1px solid rgba(255,180,0,.3);border-radius:12px;padding:6px 14px;text-align:center}
@@ -20,7 +20,7 @@ canvas{position:absolute;inset:0;pointer-events:none;touch-action:none}
 .targets{position:absolute;top:75px;left:0;right:0;display:flex;justify-content:center;gap:5px;padding:0 10px;flex-wrap:wrap}
 .tgt{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:3px 8px;font-size:10px;color:#8a6a40;display:flex;align-items:center;gap:3px;transition:all .3s;white-space:nowrap}
 .tgt.reached{border-color:#FFD000;color:#FFD000;background:rgba(255,208,0,.1)}
-.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);pointer-events:auto;transition:opacity .35s;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);pointer-events:auto;transition:opacity .35s;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;z-index:10}
 .screen.hide{opacity:0;pointer-events:none}
 .brand-title{font-family:'Noto Serif Thai',serif;font-size:28px;color:#FFD000;text-shadow:0 0 20px rgba(255,180,0,.6);text-align:center;line-height:1.1}
 .brand-sub{font-size:13px;color:#8a6a40;margin-top:4px;text-align:center}
@@ -46,8 +46,8 @@ canvas{position:absolute;inset:0;pointer-events:none;touch-action:none}
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="game-touch" style="position:absolute;inset:0;z-index:1;display:none;touch-action:none"></div>
-<div id="ui" style="z-index:3">
+<div id="game-touch" style="position:absolute;inset:0;z-index:2;display:none;touch-action:none"></div>
+<div id="ui" style="position:absolute;inset:0;z-index:10">
   <div class="hud" id="hud" style="display:none">
     <div class="score-box"><div class="score-label">คะแนน</div><div class="score-val" id="hud-score">0</div></div>
     <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:60px;height:60px">
