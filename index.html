@@ -122,6 +122,7 @@ canvas{position:absolute;inset:0;touch-action:none}
 
     <button class="btn-fire" id="btn-start" style="pointer-events:auto;touch-action:manipulation">🔪 เริ่มฟัน!</button>
     <button class="btn-sec" id="btn-view-coupons" style="margin-top:8px;pointer-events:auto;touch-action:manipulation">🎟 คูปองของฉัน</button>
+    <a href="admin.html" id="link-admin" style="display:none;margin-top:14px;font-size:11px;color:#5a4020;text-decoration:none;pointer-events:auto;border:1px solid rgba(255,180,0,.15);padding:5px 12px;border-radius:8px">⚙️ Admin</a>
   </div>
 
   <!-- COUPON -->
@@ -145,40 +146,7 @@ canvas{position:absolute;inset:0;touch-action:none}
     </div>
   </div>
 
-  <!-- ADMIN PANEL -->
-  <div class="screen hide" id="scr-admin" style="background:rgba(10,5,0,.98);overflow-y:auto">
-    <div style="width:100%;max-width:380px;margin:auto">
-      <div class="brand-title" style="font-size:22px">⚙️ Admin Panel</div>
-      <div class="brand-sub">ตั้งค่าคะแนนและคูปอง</div>
-      <div class="deco-line"></div>
 
-      <div style="background:rgba(255,180,0,.06);border:1px solid rgba(255,180,0,.25);border-radius:12px;padding:12px;margin:8px 0">
-        <div style="font-size:13px;color:#FFD000;font-weight:600;margin-bottom:8px">💣 คะแนนติดลบเมื่อโดนระเบิด</div>
-        <input type="number" id="adm-bomb" class="inp" min="0" max="100" style="margin-bottom:0">
-      </div>
-
-      <div style="background:rgba(255,180,0,.06);border:1px solid rgba(255,180,0,.25);border-radius:12px;padding:12px;margin:8px 0">
-        <div style="font-size:13px;color:#FFD000;font-weight:600;margin-bottom:8px">🍜 รายการอาหาร (คะแนน • น้ำหนัก)</div>
-        <div style="font-size:10px;color:#8a6a40;margin-bottom:8px">น้ำหนัก = โอกาสปรากฏ (มากกว่า = ออกบ่อยกว่า)</div>
-        <div id="adm-foods" style="display:flex;flex-direction:column;gap:6px"></div>
-      </div>
-
-      <div style="background:rgba(255,180,0,.06);border:1px solid rgba(255,180,0,.25);border-radius:12px;padding:12px;margin:8px 0">
-        <div style="font-size:13px;color:#FFD000;font-weight:600;margin-bottom:8px">🎟 คูปองรางวัล</div>
-        <div id="adm-rewards" style="display:flex;flex-direction:column;gap:6px"></div>
-      </div>
-
-      <div style="display:flex;gap:8px;margin:14px 0;pointer-events:auto">
-        <button class="btn-sec" id="adm-reset" style="touch-action:manipulation">รีเซ็ตค่าเริ่มต้น</button>
-        <button class="btn-fire" id="adm-save" style="font-size:14px;padding:11px 20px;margin-top:0;touch-action:manipulation">💾 บันทึก</button>
-      </div>
-      <button class="btn-sec" id="adm-close" style="width:100%;touch-action:manipulation;pointer-events:auto">← กลับหน้าเกม</button>
-      <div style="margin-top:14px;font-size:10px;color:#5a4020;text-align:center;line-height:1.6">
-        📌 เปิดหน้านี้: เพิ่ม <code style="background:rgba(255,255,255,.1);padding:2px 5px;border-radius:3px">?admin=1</code> ใน URL<br>
-        หรือกดที่ชื่อ "ฟันอาหารอมรินทร์!" 5 ครั้งติดกัน
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -209,7 +177,7 @@ function defCfg(){
     rewards:[{"pts": 30, "icon": "🎟", "name": "ส่วนลด 20 บาท", "desc": "ใช้ได้ทุกเมนู", "coupon": "AMRIN-20THB", "expDays": 30, "active": true}, {"pts": 60, "icon": "🍖", "name": "ส่วนลด 40 บาท", "desc": "เมนูหลักทุกชนิด", "coupon": "AMRIN-40THB", "expDays": 14, "active": true}, {"pts": 100, "icon": "🥩", "name": "ส่วนลด 60 บาท", "desc": "ขั้นต่ำ 150 บาท", "coupon": "AMRIN-60THB", "expDays": 7, "active": true}, {"pts": 150, "icon": "👑", "name": "ฟรี! เมนูตามใจ", "desc": "มูลค่าสูงสุด 80บ", "coupon": "AMRIN-FREE80", "expDays": 3, "active": true}]
   };
 }
-function getFoods(){return(getAdminCfg().foods||[]);}
+function getFoods(){return(getAdminCfg().foods||[]).filter(function(f){return f.active!==false;});}
 
 // ── IMAGE CACHE ──
 var IMGS={};
@@ -303,11 +271,36 @@ function buildMenuPreview(){
 // ── CANVAS ──
 var cv=document.getElementById('c'),ctx=cv.getContext('2d');
 var W,H;
-function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
-resize();window.addEventListener('resize',resize);
+function resize(){
+  var newW=window.innerWidth, newH=window.innerHeight;
+  // ถ้าขนาดไม่ได้เปลี่ยน ไม่ต้องทำอะไร (กัน canvas clear โดยไม่จำเป็น)
+  if(W===newW&&H===newH)return;
+  // ถ้ากำลังเล่นและความกว้างเท่าเดิม (เป็นแค่ URL bar ขยับ) ให้ skip
+  // แค่อัปเดตค่าโดยไม่ assign canvas.width/height
+  if(active&&W===newW&&Math.abs((H||0)-newH)<150){
+    H=newH;
+    return;
+  }
+  W=cv.width=newW;
+  H=cv.height=newH;
+}
+resize();
+// debounce resize 250ms — กันเด้งจาก URL bar มือถือ
+var _rzT=null;
+window.addEventListener('resize',function(){
+  if(_rzT)clearTimeout(_rzT);
+  _rzT=setTimeout(resize,250);
+});
+// กัน pull-to-refresh และ scroll ขณะเกม active
+document.addEventListener('touchmove',function(e){if(active)e.preventDefault();},{passive:false});
 
-var LV={easy:{time:60,spawn:1.4,speed:.5,bomb:.06},normal:{time:45,spawn:1.0,speed:.7,bomb:.1},hard:{time:45,spawn:0.85,speed:0.85,bomb:.25}};
-var level='hard',active=false,score=0,lives=3,tLeft=60,combo=0;
+// Reset lastT เมื่อกลับมาจาก background — ป้องกัน dt ใหญ่ผิดปกติ
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&active){lastT=performance.now();}
+});
+
+var LV={easy:{time:60,spawn:1.4,speed:.5,bomb:.06},normal:{time:50,spawn:1.6,speed:.35,bomb:.10},hard:{time:45,spawn:0.85,speed:0.85,bomb:.25}};
+var level='normal',active=false,score=0,lives=3,tLeft=60,combo=0;
 var spawnT=0,items=[],trail=[],animId=null,lastT=0,px=0,py=0,ppx=0,ppy=0,pdown=false,shakeT=0;
 
 function randFood(){
@@ -318,7 +311,7 @@ function randFood(){
 
 function doSpawn(bomb){
   var x=60+Math.random()*(W-120),cfg=LV[level];
-  var vy=-(5+Math.random()*3)*(0.8+cfg.speed),vx=(Math.random()-.5)*2;
+  var vy=-(8+Math.random()*2)*(0.7+cfg.speed*0.5),vx=(Math.random()-.5)*1.5;
   var sz=bomb?56:Math.max(44,Math.min(100,(bomb?56:randFood().size||60)));
   if(bomb){
     items.push({type:'bomb',x:x,y:H+80,vx:vx,vy:vy,rot:0,vrot:(Math.random()-.5)*.12,size:sz,sliced:false,fade:1,pieces:[]});
@@ -386,39 +379,45 @@ function drawFoodItem(ctx,food,size,x,y,rot,alpha,flip){
   }
 }
 
-var G=4.5;
+var G=3.5;
 function loop(ts){
   if(!active)return;
-  var dt=Math.min((ts-lastT)/1000,.05);lastT=ts;
-  if(shakeT>0)shakeT-=dt;
-  var ox=shakeT>0?(Math.random()-.5)*10:0,oy=shakeT>0?(Math.random()-.5)*8:0;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#1c0a01';ctx.fillRect(0,0,W,H);
-  var bg=ctx.createRadialGradient(W/2,H*.5,0,W/2,H*.8,H*0.9);bg.addColorStop(0,'#2a1005');bg.addColorStop(1,'#0a0400');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  if(trail.length>1){for(var ti=1;ti<trail.length;ti++){var a=ti/trail.length;ctx.beginPath();ctx.moveTo(trail[ti-1].x+ox,trail[ti-1].y+oy);ctx.lineTo(trail[ti].x+ox,trail[ti].y+oy);ctx.strokeStyle='rgba(255,240,180,'+a*.75+')';ctx.lineWidth=a*6;ctx.lineCap='round';ctx.stroke();}if(trail.length>20)trail=trail.slice(-20);}
-  spawnT+=dt;
-  if(spawnT>=LV[level].spawn){spawnT=0;doSpawn(Math.random()<LV[level].bomb);if(Math.random()<.4)doSpawn(Math.random()<LV[level].bomb);}
-  items=items.filter(function(it){
-    if(!it.sliced){it.x+=it.vx;it.vy+=G*dt;it.y+=it.vy;it.rot+=it.vrot;if(pdown&&hitTest(it))doSlice(it);}
-    else it.fade-=dt*2;
-    if(!it.sliced&&it.y>H+90){if(it.type==='food'){combo=0;}return false;}
-    if(it.sliced&&it.fade<=0)return false;
-    if(it.sliced&&it.sa>0){it.sr+=4;it.sa-=dt*3;ctx.save();ctx.globalAlpha=Math.max(0,it.sa);ctx.beginPath();ctx.arc(it.x+ox,it.y+oy,it.sr,0,Math.PI*2);ctx.fillStyle=it.sc;ctx.fill();ctx.restore();}
-    if(!it.sliced){
-      if(it.type==='bomb'){ctx.save();ctx.translate(it.x+ox,it.y+oy);ctx.rotate(it.rot);ctx.font=it.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('💣',0,0);ctx.restore();}
-      else drawFoodItem(ctx,it.food,it.size,it.x+ox,it.y+oy,it.rot,1,false);
-    }
-    it.pieces=it.pieces.filter(function(p){
-      p.x+=p.vx;p.vy=(p.vy||0)+G*dt*1.3;p.y+=p.vy;p.rot+=p.vrot;p.alpha-=dt*1.5;
-      if(p.alpha<=0)return false;
-      drawFoodItem(ctx,p.food,p.s*.5,p.x+ox,p.y+oy,p.rot,p.alpha,p.side===0);
+  try{
+    var dt=Math.min((ts-lastT)/1000,.05);lastT=ts;
+    if(shakeT>0)shakeT-=dt;
+    var ox=shakeT>0?(Math.random()-.5)*10:0,oy=shakeT>0?(Math.random()-.5)*8:0;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#1c0a01';ctx.fillRect(0,0,W,H);
+    var bg=ctx.createRadialGradient(W/2,H*.5,0,W/2,H*.8,H*0.9);bg.addColorStop(0,'#2a1005');bg.addColorStop(1,'#0a0400');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    if(trail.length>1){for(var ti=1;ti<trail.length;ti++){var a=ti/trail.length;ctx.beginPath();ctx.moveTo(trail[ti-1].x+ox,trail[ti-1].y+oy);ctx.lineTo(trail[ti].x+ox,trail[ti].y+oy);ctx.strokeStyle='rgba(255,240,180,'+a*.75+')';ctx.lineWidth=a*6;ctx.lineCap='round';ctx.stroke();}if(trail.length>20)trail=trail.slice(-20);}
+    spawnT+=dt;
+    if(spawnT>=LV[level].spawn){spawnT=0;doSpawn(Math.random()<LV[level].bomb);if(Math.random()<.25)doSpawn(Math.random()<LV[level].bomb);}
+    items=items.filter(function(it){
+      if(!it.sliced){it.x+=it.vx;it.vy+=G*dt;it.y+=it.vy;it.rot+=it.vrot;if(pdown&&hitTest(it))doSlice(it);}
+      else it.fade-=dt*2;
+      if(!it.sliced&&it.y>H+90){if(it.type==='food'){combo=0;}return false;}
+      if(it.sliced&&it.fade<=0)return false;
+      if(it.sliced&&it.sa>0){it.sr+=4;it.sa-=dt*3;ctx.save();ctx.globalAlpha=Math.max(0,it.sa);ctx.beginPath();ctx.arc(it.x+ox,it.y+oy,it.sr,0,Math.PI*2);ctx.fillStyle=it.sc;ctx.fill();ctx.restore();}
+      if(!it.sliced){
+        if(it.type==='bomb'){ctx.save();ctx.translate(it.x+ox,it.y+oy);ctx.rotate(it.rot);ctx.font=it.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('💣',0,0);ctx.restore();}
+        else drawFoodItem(ctx,it.food,it.size,it.x+ox,it.y+oy,it.rot,1,false);
+      }
+      it.pieces=it.pieces.filter(function(p){
+        p.x+=p.vx;p.vy=(p.vy||0)+G*dt*1.3;p.y+=p.vy;p.rot+=p.vrot;p.alpha-=dt*1.5;
+        if(p.alpha<=0)return false;
+        drawFoodItem(ctx,p.food,p.s*.5,p.x+ox,p.y+oy,p.rot,p.alpha,p.side===0);
+        return true;
+      });
       return true;
     });
-    return true;
-  });
-  tLeft=Math.max(0,tLeft-dt);document.getElementById('ttxt').textContent=Math.ceil(tLeft);drawArc();
-  if(tLeft<=0){endGame();return;}
-  animId=requestAnimationFrame(loop);
+    tLeft=Math.max(0,tLeft-dt);document.getElementById('ttxt').textContent=Math.ceil(tLeft);drawArc();
+    if(tLeft<=0){endGame();return;}
+    animId=requestAnimationFrame(loop);
+  }catch(err){
+    console.error('loop err:',err);
+    // ถ้ามี error ก็ continue loop ต่อ ไม่ให้ animation หยุด
+    animId=requestAnimationFrame(loop);
+  }
 }
 
 cv.addEventListener('mousedown',function(e){if(!active)return;pdown=true;ppx=px=e.clientX;ppy=py=e.clientY;});
@@ -427,11 +426,24 @@ cv.addEventListener('mouseup',function(){pdown=false;trail=[];});
 cv.addEventListener('touchstart',function(e){if(!active)return;e.preventDefault();pdown=true;var t=e.touches[0];ppx=px=t.clientX;ppy=py=t.clientY;},{passive:false});
 cv.addEventListener('touchmove',function(e){if(!active)return;e.preventDefault();var t=e.touches[0];ppx=px;ppy=py;px=t.clientX;py=t.clientY;trail.push({x:px,y:py});},{passive:false});
 cv.addEventListener('touchend',function(e){if(!active)return;e.preventDefault();pdown=false;trail=[];},{passive:false});
+cv.addEventListener('touchcancel',function(e){pdown=false;trail=[];},{passive:true});
+// กัน browser back/forward cache — ถ้ากลับมาแล้ว canvas ดับให้ resume
+window.addEventListener('pageshow',function(e){
+  if(active&&!animId){
+    lastT=performance.now();
+    animId=requestAnimationFrame(loop);
+  }
+});
 
 
 function hideAll(){document.querySelectorAll('.screen').forEach(function(s){s.classList.add('hide');});}
 
 function startGame(){
+  // ถ้าเกมเก่ายังรันอยู่ ให้หยุดก่อน (กันค้าง)
+  if(active||animId){
+    active=false;
+    if(animId){cancelAnimationFrame(animId);animId=null;}
+  }
   IMGS={};score=0;lives=3;combo=0;tLeft=LV[level].time;items=[];trail=[];spawnT=0;lastT=0;shakeT=0;
   [0,1,2].forEach(function(i){var el=document.getElementById('h'+i);if(el)el.classList.remove('lost');});
   document.getElementById('hud-score').textContent='0';
@@ -439,49 +451,59 @@ function startGame(){
   document.getElementById('hud').style.display='flex';
   document.getElementById('targets').style.display='flex';
   buildTgts();refreshTgts();active=true;
-  if(animId)cancelAnimationFrame(animId);
   animId=requestAnimationFrame(function(t){lastT=t;loop(t);});
 }
 
 function expDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});}
 
 function endGame(){
-  active=false;if(animId)cancelAnimationFrame(animId);
-  document.getElementById('hud').style.display='none';document.getElementById('targets').style.display='none';
-  var cfg=getAdminCfg(),nc=[];
-  cfg.rewards.filter(function(r){return r.active&&score>=r.pts;}).forEach(function(r){
-    var already=PL.coupons.some(function(cp){return cp.code===r.coupon&&!cp.used;});
-    if(!already){PL.coupons.push({code:r.coupon,name:r.name,desc:r.desc,icon:r.icon,expDays:r.expDays,earnedAt:new Date().toISOString(),used:false});nc.push(r);}
-  });
-  PL.totalPts=(PL.totalPts||0)+score;
-  document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
-  savePL();
-  // ส่งข้อมูลคูปองที่ได้รับใหม่ไป backend
-  nc.forEach(function(r){
-    sendToBackend('earn',{
-      coupon_code:r.coupon,
-      coupon_name:r.name,
-      score:score
+  active=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  document.getElementById('hud').style.display='none';
+  document.getElementById('targets').style.display='none';
+  try{
+    var cfg=getAdminCfg(),nc=[];
+    cfg.rewards.filter(function(r){return r.active&&score>=r.pts;}).forEach(function(r){
+      var already=PL.coupons.some(function(cp){return cp.code===r.coupon&&!cp.used;});
+      if(!already){PL.coupons.push({code:r.coupon,name:r.name,desc:r.desc,icon:r.icon,expDays:r.expDays,earnedAt:new Date().toISOString(),used:false});nc.push(r);}
     });
-  });
-  document.getElementById('ri').textContent=score>=150?'👑':score>=100?'🏆':score>=60?'🎯':score>=30?'👍':'😅';
-  document.getElementById('rt').textContent=score>=150?'โคตรเก่ง!':score>=100?'ยอดเยี่ยม!':score>=60?'ไม่เลวเลย!':score>=30?'พอใช้ได้!':'ลองอีกครั้ง!';
-  document.getElementById('rs').textContent=score;
-  document.getElementById('rc-list').innerHTML=cfg.rewards.filter(function(r){return r.active;}).map(function(r){
-    var got=score>=r.pts,isNew=nc.some(function(n){return n.coupon===r.coupon;});
-    return '<div class="rc '+(got?'got':'locked')+'">'
-      +'<div style="font-size:20px;width:26px;text-align:center;flex-shrink:0">'+r.icon+'</div>'
-      +'<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#FFD000">'+(isNew?'🆕 ':'')+r.name+'</div>'
-      +'<div style="font-size:10px;color:#8a6a40;margin-top:2px">'+r.desc+'</div>'
-      +(got?'<div style="font-family:monospace;font-size:13px;color:#fff;background:rgba(0,0,0,.4);border-radius:4px;padding:2px 7px;display:inline-block;margin-top:3px;letter-spacing:.1em">'+r.coupon+'</div>'
-           +'<div style="font-size:10px;color:#e57373;margin-top:2px">⏰ หมดอายุ: '+expDate(r.expDays)+'</div>'
-        :'<div style="font-size:10px;color:#5a4020">ต้องการ '+r.pts+' คะแนน</div>')
-      +'</div><div style="font-size:18px">'+(got?'✅':'🔒')+'</div></div>';
-  }).join('');
-  hideAll();document.getElementById('scr-result').classList.remove('hide');
+    PL.totalPts=(PL.totalPts||0)+score;
+    document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
+    savePL();
+    nc.forEach(function(r){
+      try{sendToBackend('earn',{coupon_code:r.coupon,coupon_name:r.name,score:score});}catch(e){}
+    });
+    document.getElementById('ri').textContent=score>=150?'👑':score>=100?'🏆':score>=60?'🎯':score>=30?'👍':'😅';
+    document.getElementById('rt').textContent=score>=150?'โคตรเก่ง!':score>=100?'ยอดเยี่ยม!':score>=60?'ไม่เลวเลย!':score>=30?'พอใช้ได้!':'ลองอีกครั้ง!';
+    document.getElementById('rs').textContent=score;
+    document.getElementById('rc-list').innerHTML=cfg.rewards.filter(function(r){return r.active;}).map(function(r){
+      var got=score>=r.pts,isNew=nc.some(function(n){return n.coupon===r.coupon;});
+      return '<div class="rc '+(got?'got':'locked')+'">'
+        +'<div style="font-size:20px;width:26px;text-align:center;flex-shrink:0">'+r.icon+'</div>'
+        +'<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#FFD000">'+(isNew?'🆕 ':'')+r.name+'</div>'
+        +'<div style="font-size:10px;color:#8a6a40;margin-top:2px">'+r.desc+'</div>'
+        +(got?'<div style="font-family:monospace;font-size:13px;color:#fff;background:rgba(0,0,0,.4);border-radius:4px;padding:2px 7px;display:inline-block;margin-top:3px;letter-spacing:.1em">'+r.coupon+'</div>'
+             +'<div style="font-size:10px;color:#e57373;margin-top:2px">⏰ หมดอายุ: '+expDate(r.expDays)+'</div>'
+          :'<div style="font-size:10px;color:#5a4020">ต้องการ '+r.pts+' คะแนน</div>')
+        +'</div><div style="font-size:18px">'+(got?'✅':'🔒')+'</div></div>';
+    }).join('');
+  }catch(err){
+    console.error('endGame err:',err);
+    document.getElementById('rs').textContent=score;
+    document.getElementById('rt').textContent='จบเกม!';
+  }
+  hideAll();
+  document.getElementById('scr-result').classList.remove('hide');
 }
 
 function viewCoupons(){
+  // หยุดเกมถ้ากำลังเล่นอยู่
+  if(active){
+    active=false;
+    if(animId){cancelAnimationFrame(animId);animId=null;}
+    document.getElementById('hud').style.display='none';
+    document.getElementById('targets').style.display='none';
+  }
   hideAll();
   var el=document.getElementById('my-coupons'),cps=PL.coupons||[];
   if(!cps.length){el.innerHTML='<div style="text-align:center;color:#8a6a40;padding:20px">ยังไม่มีคูปอง<br>เล่นเกมส์เพื่อรับคูปอง!</div>';}
@@ -560,90 +582,13 @@ function confirmUseCoupon(){
   },400);
 }
 
-function goTitle(){hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');}
-
-// ── ADMIN PANEL ──
-function openAdmin(){
-  var cfg=getAdminCfg();
-  document.getElementById('adm-bomb').value=cfg.bombPenalty||10;
-
-  // อาหาร
-  var foodsEl=document.getElementById('adm-foods');
-  foodsEl.innerHTML=cfg.foods.map(function(f,i){
-    var thumb=f.img&&f.img.startsWith('data:')
-      ? '<img src="'+f.img+'" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0">'
-      : '<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+(f.emoji||'🍜')+'</div>';
-    return '<div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);padding:6px;border-radius:8px">'
-      +thumb
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+f.name+'</div>'
-      +'<div style="display:flex;gap:4px;margin-top:2px">'
-      +'<input type="number" class="adm-fpts inp" data-i="'+i+'" value="'+f.pts+'" min="1" max="999" style="margin:0;padding:4px 6px;font-size:11px;width:60px" placeholder="คะแนน">'
-      +'<input type="number" class="adm-fw inp" data-i="'+i+'" value="'+(f.w||1)+'" min="1" max="10" style="margin:0;padding:4px 6px;font-size:11px;width:50px" placeholder="น้ำหนัก">'
-      +'<label style="font-size:10px;color:#8a6a40;display:flex;align-items:center;gap:3px;margin-left:auto">'
-      +'<input type="checkbox" class="adm-fact" data-i="'+i+'" '+(f.active!==false?'checked':'')+'> เปิด</label>'
-      +'</div></div></div>';
-  }).join('');
-
-  // รางวัล
-  var rwEl=document.getElementById('adm-rewards');
-  rwEl.innerHTML=cfg.rewards.map(function(r,i){
-    return '<div style="background:rgba(0,0,0,.3);padding:8px;border-radius:8px">'
-      +'<div style="font-size:11px;color:#FFD000;margin-bottom:4px">'+r.icon+' '+r.name+'</div>'
-      +'<div style="display:flex;gap:4px;flex-wrap:wrap">'
-      +'<input type="number" class="adm-rpts inp" data-i="'+i+'" value="'+r.pts+'" min="1" style="margin:0;padding:4px 6px;font-size:11px;width:70px" placeholder="คะแนน">'
-      +'<input type="number" class="adm-rexp inp" data-i="'+i+'" value="'+(r.expDays||30)+'" min="1" style="margin:0;padding:4px 6px;font-size:11px;width:60px" placeholder="วันหมดอายุ">'
-      +'<label style="font-size:10px;color:#8a6a40;display:flex;align-items:center;gap:3px;margin-left:auto">'
-      +'<input type="checkbox" class="adm-ract" data-i="'+i+'" '+(r.active!==false?'checked':'')+'> เปิด</label>'
-      +'</div></div>';
-  }).join('');
-
-  hideAll();
-  document.getElementById('scr-admin').classList.remove('hide');
-}
-
-function saveAdmin(){
-  var cfg=getAdminCfg();
-  cfg.bombPenalty=parseInt(document.getElementById('adm-bomb').value,10)||10;
-
-  // foods
-  document.querySelectorAll('.adm-fpts').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.foods[i].pts=parseInt(inp.value,10)||1;
-  });
-  document.querySelectorAll('.adm-fw').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.foods[i].w=parseInt(inp.value,10)||1;
-  });
-  document.querySelectorAll('.adm-fact').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.foods[i].active=inp.checked;
-  });
-
-  // rewards
-  document.querySelectorAll('.adm-rpts').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.rewards[i].pts=parseInt(inp.value,10)||1;
-  });
-  document.querySelectorAll('.adm-rexp').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.rewards[i].expDays=parseInt(inp.value,10)||30;
-  });
-  document.querySelectorAll('.adm-ract').forEach(function(inp){
-    var i=parseInt(inp.getAttribute('data-i'),10);
-    cfg.rewards[i].active=inp.checked;
-  });
-
-  saveAdminCfg(cfg);
-  alert('✅ บันทึกแล้ว!');
-}
-
-function resetAdmin(){
-  if(confirm('รีเซ็ตค่าทั้งหมดกลับเป็นค่าเริ่มต้น?')){
-    localStorage.removeItem('amrin_admin_cfg');
-    openAdmin();
-    alert('✅ รีเซ็ตแล้ว');
-  }
+function goTitle(){
+  // หยุดเกมถ้ากำลังเล่นอยู่
+  active=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  document.getElementById('hud').style.display='none';
+  document.getElementById('targets').style.display='none';
+  hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');
 }
 
 // ── START ──
@@ -696,16 +641,13 @@ window.addEventListener('load',function(){
   }
 
   // ── Admin panel triggers ──
-  bindTap(document.getElementById('adm-save'),saveAdmin);
-  bindTap(document.getElementById('adm-reset'),resetAdmin);
-  bindTap(document.getElementById('adm-close'),goTitle);
-
-  // เปิด admin ผ่าน URL ?admin=1
+  // เปิด admin ผ่าน URL ?admin=1 — แสดงปุ่มลิงค์
   if(/[?&]admin=1/.test(location.search)){
-    setTimeout(openAdmin,100);
+    var lk=document.getElementById('link-admin');
+    if(lk)lk.style.display='inline-block';
   }
 
-  // กดที่ title 5 ครั้งติดกัน (3 วินาที) เพื่อเปิด admin
+  // กดที่ title 5 ครั้งติดกัน (3 วินาที) เพื่อแสดงปุ่ม admin
   var titleTaps=0,titleTimer=null;
   document.querySelectorAll('.brand-title').forEach(function(el){
     el.style.cursor='pointer';
@@ -713,7 +655,11 @@ window.addEventListener('load',function(){
       titleTaps++;
       if(titleTimer)clearTimeout(titleTimer);
       titleTimer=setTimeout(function(){titleTaps=0;},3000);
-      if(titleTaps>=5){titleTaps=0;openAdmin();}
+      if(titleTaps>=5){
+        titleTaps=0;
+        var lk=document.getElementById('link-admin');
+        if(lk){lk.style.display='inline-block';lk.textContent='⚙️ Admin (เปิดแล้ว)';}
+      }
     });
   });
   // ถ้ามีข้อมูลผู้เล่นที่เคยลงทะเบียนใน device นี้ ให้ข้ามไปหน้าหลัก
