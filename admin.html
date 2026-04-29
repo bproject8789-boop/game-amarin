@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — ฟันอาหารอมรินทร์</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=Noto+Serif+Thai:wght@700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0400;color:#fff8f0;font-family:'Mitr',sans-serif;min-height:100vh;padding:20px}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-family:'Noto Serif Thai',serif;color:#FFD000;font-size:28px;text-align:center;margin-bottom:6px}
+.sub{font-size:13px;color:#8a6a40;text-align:center;margin-bottom:16px}
+.deco{width:160px;height:1.5px;background:linear-gradient(90deg,transparent,#FFD000,transparent);margin:0 auto 24px}
+
+.section{background:rgba(255,180,0,.05);border:1px solid rgba(255,180,0,.25);border-radius:14px;padding:18px;margin-bottom:16px}
+.section h2{font-size:16px;color:#FFD000;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section .hint{font-size:11px;color:#8a6a40;margin-bottom:10px;line-height:1.5}
+
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+label{font-size:12px;color:#c8a060;display:flex;align-items:center;gap:6px}
+.inp{background:rgba(0,0,0,.5);border:1px solid rgba(255,180,0,.3);border-radius:8px;padding:8px 10px;color:#fff8f0;font-size:13px;font-family:'Mitr',sans-serif;outline:none;transition:border-color .15s}
+.inp:focus{border-color:#FFD000}
+.inp.sm{width:70px}
+.inp.md{width:120px}
+.inp.lg{flex:1;min-width:160px}
+
+.btn{padding:10px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Mitr',sans-serif;transition:all .15s;touch-action:manipulation}
+.btn-pri{background:linear-gradient(135deg,#bf360c,#E64A19);color:#fff;box-shadow:0 4px 16px rgba(230,74,25,.4)}
+.btn-pri:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(230,74,25,.5)}
+.btn-sec{background:rgba(255,255,255,.06);color:#c8a060;border:1px solid rgba(255,255,255,.15)}
+.btn-sec:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(229,57,53,.15);color:#ff7043;border:1px solid rgba(229,57,53,.3)}
+.btn-danger:hover{background:rgba(229,57,53,.25)}
+.btn-add{background:rgba(255,208,0,.1);color:#FFD000;border:1px dashed rgba(255,208,0,.4);width:100%;padding:14px}
+.btn-add:hover{background:rgba(255,208,0,.15)}
+
+.food-card,.reward-card{background:rgba(0,0,0,.3);border:1px solid rgba(255,180,0,.15);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.food-card .pic-wrap{position:relative;flex-shrink:0}
+.food-card .pic{width:80px;height:80px;border-radius:10px;background:#1a0f08;border:1.5px solid rgba(255,180,0,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative}
+.food-card .pic img{width:100%;height:100%;object-fit:cover}
+.food-card .pic .placeholder{font-size:32px;color:#5a4020}
+.food-card .pic-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);color:#FFD000;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;border-radius:9px;text-align:center;padding:4px}
+.food-card .pic:hover .pic-overlay{opacity:1}
+.food-card .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.food-card .info-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.food-card .info-row label{font-size:10px;color:#8a6a40;display:flex;flex-direction:column;gap:3px}
+.food-card .actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.food-card .actions .btn{padding:6px 10px;font-size:11px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(255,208,0,.15);color:#FFD000}
+.tag.off{background:rgba(120,120,120,.2);color:#8a6a40}
+
+.toolbar{display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px;flex-wrap:wrap;position:sticky;top:0;background:#0a0400;padding:10px 0;z-index:5;border-bottom:1px solid rgba(255,180,0,.1)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a0f08;border:1.5px solid #FFD000;border-radius:10px;padding:12px 20px;color:#FFD000;font-size:14px;font-weight:600;box-shadow:0 8px 30px rgba(255,180,0,.3);transition:transform .35s;z-index:1000;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:#e53935;color:#ff7043}
+
+.checkbox{width:16px;height:16px;accent-color:#FFD000;cursor:pointer}
+
+.preview-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-bottom:10px}
+.preview-strip img{width:50px;height:50px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid rgba(255,180,0,.3)}
+
+@media(max-width:600px){
+  body{padding:10px}
+  .food-card{flex-wrap:wrap}
+  .food-card .actions{flex-direction:row;width:100%}
+  .food-card .actions .btn{flex:1}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚙️ Admin Panel</h1>
+  <div class="sub">ฟันอาหารอมรินทร์ — ตั้งค่าเกม</div>
+  <div class="deco"></div>
+
+  <div class="toolbar">
+    <button class="btn btn-sec" id="btn-export">📤 Export JSON</button>
+    <button class="btn btn-sec" id="btn-import">📥 Import JSON</button>
+    <button class="btn btn-danger" id="btn-reset">🔄 รีเซ็ต</button>
+    <button class="btn btn-pri" id="btn-save">💾 บันทึก</button>
+  </div>
+
+  <input type="file" id="import-file" accept=".json" style="display:none">
+
+  <!-- Game Settings -->
+  <div class="section">
+    <h2>🎮 ตั้งค่าเกม</h2>
+    <div class="row">
+      <label>💣 คะแนนติดลบเมื่อโดนระเบิด
+        <input type="number" id="bomb-pen" class="inp md" min="0" max="100">
+      </label>
+    </div>
+  </div>
+
+  <!-- Foods -->
+  <div class="section">
+    <h2>🍜 รายการอาหาร <span id="food-count" style="font-size:11px;color:#8a6a40;font-weight:400"></span></h2>
+    <div class="hint">📌 คลิกที่รูปเพื่อเปลี่ยนรูป (รองรับ JPG/PNG รูปจะถูก resize ให้เหมาะกับเกมอัตโนมัติ)<br>
+    📌 น้ำหนัก = โอกาสปรากฏในเกม (มากกว่า = ออกบ่อยกว่า)</div>
+    <div id="foods"></div>
+    <button class="btn btn-add" id="add-food">➕ เพิ่มเมนูใหม่</button>
+  </div>
+
+  <!-- Rewards -->
+  <div class="section">
+    <h2>🎟 คูปองรางวัล</h2>
+    <div class="hint">📌 รหัสคูปองจะใช้แสดงที่ร้านเมื่อผู้เล่นใช้สิทธิ์</div>
+    <div id="rewards"></div>
+    <button class="btn btn-add" id="add-reward">➕ เพิ่มคูปองใหม่</button>
+  </div>
+
+  <div style="text-align:center;margin:20px 0">
+    <a href="index.html" style="color:#8a6a40;font-size:12px;text-decoration:none">← กลับไปเกม</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Image resize utility ──
+function resizeImage(file, maxSize, cb){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      // square crop จากตรงกลาง
+      var size = Math.min(w, h);
+      var sx = (w-size)/2, sy = (h-size)/2;
+      canvas.width = maxSize; canvas.height = maxSize;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,maxSize,maxSize);
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
+      cb(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = function(){cb(null);};
+    img.src = e.target.result;
+  };
+  reader.onerror = function(){cb(null);};
+  reader.readAsDataURL(file);
+}
+
+// ── Default config ──
+function defCfg(){
+  return {
+    bombPenalty: 10,
+    foods: [
+      {id:'f1', name:'เกี๊ยวต้ม', pts:10, w:2, emoji:'🍜', img:'', size:72, active:true},
+      {id:'f2', name:'เกี๊ยวทอด', pts:8, w:2, emoji:'🥟', img:'', size:72, active:true},
+      {id:'f3', name:'กะเพราเนื้อ', pts:15, w:1, emoji:'🍛', img:'', size:72, active:true},
+      {id:'f4', name:'กะเพราหมูกรอบ', pts:12, w:2, emoji:'🍛', img:'', size:72, active:true},
+      {id:'f5', name:'ข้าวหน้าเนื้อ', pts:18, w:1, emoji:'🍚', img:'', size:72, active:true},
+      {id:'f6', name:'คะน้าหมูกรอบ', pts:10, w:2, emoji:'🥬', img:'', size:72, active:true},
+      {id:'f7', name:'บะหมี่เกี๊ยวหมูกรอบ', pts:12, w:2, emoji:'🍜', img:'', size:72, active:true},
+      {id:'f8', name:'บะหมี่เนื้อ', pts:15, w:1, emoji:'🍜', img:'', size:72, active:true},
+      {id:'f9', name:'บะหมี่กะเพราหมูกรอบ', pts:12, w:2, emoji:'🍜', img:'', size:72, active:true},
+      {id:'f10', name:'หมูกรอบคั่วพริกเกลือ', pts:10, w:2, emoji:'🍖', img:'', size:72, active:true}
+    ],
+    rewards: [
+      {pts:30, icon:'🎟', name:'ส่วนลด 20 บาท', desc:'ใช้ได้ทุกเมนู', coupon:'AMRIN-20THB', expDays:30, active:true},
+      {pts:60, icon:'🍖', name:'ส่วนลด 40 บาท', desc:'เมนูหลักทุกชนิด', coupon:'AMRIN-40THB', expDays:14, active:true},
+      {pts:100, icon:'🥩', name:'ส่วนลด 60 บาท', desc:'ขั้นต่ำ 150 บาท', coupon:'AMRIN-60THB', expDays:7, active:true},
+      {pts:150, icon:'👑', name:'ฟรี! เมนูตามใจ', desc:'มูลค่าสูงสุด 80บ', coupon:'AMRIN-FREE80', expDays:3, active:true}
+    ]
+  };
+}
+
+// ── State ──
+var cfg = null;
+
+function loadCfg(){
+  try{
+    var saved = localStorage.getItem('amrin_admin_cfg');
+    if(saved){
+      cfg = JSON.parse(saved);
+      // merge missing fields
+      var def = defCfg();
+      if(cfg.bombPenalty == null) cfg.bombPenalty = def.bombPenalty;
+      if(!cfg.foods || !cfg.foods.length) cfg.foods = def.foods;
+      if(!cfg.rewards || !cfg.rewards.length) cfg.rewards = def.rewards;
+      // ensure each food has all fields
+      cfg.foods.forEach(function(f,i){
+        if(!f.id) f.id = 'f'+Date.now()+'_'+i;
+        if(f.active == null) f.active = true;
+        if(!f.size) f.size = 72;
+        if(!f.emoji) f.emoji = '🍜';
+        if(!f.w) f.w = 1;
+      });
+      cfg.rewards.forEach(function(r){
+        if(r.active == null) r.active = true;
+        if(!r.expDays) r.expDays = 30;
+      });
+      return;
+    }
+  }catch(e){console.warn('load err',e);}
+  cfg = defCfg();
+}
+
+function saveCfg(showMsg){
+  try{
+    localStorage.setItem('amrin_admin_cfg', JSON.stringify(cfg));
+    if(showMsg !== false) toast('💾 บันทึกเรียบร้อย');
+  }catch(e){
+    toast('❌ บันทึกล้มเหลว: '+e.message, true);
+  }
+}
+
+function toast(msg, err){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!err);
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function(){t.classList.remove('show');}, 2400);
+}
+
+// ── Render Foods ──
+function renderFoods(){
+  var el = document.getElementById('foods');
+  document.getElementById('food-count').textContent = '('+cfg.foods.length+' เมนู)';
+  el.innerHTML = cfg.foods.map(function(f, i){
+    var pic = f.img && f.img.startsWith('data:')
+      ? '<img src="'+f.img+'" alt="">'
+      : '<div class="placeholder">'+(f.emoji||'🍜')+'</div>';
+    return ''
+      +'<div class="food-card" data-i="'+i+'">'
+      +'  <div class="pic-wrap">'
+      +'    <div class="pic" data-pic="'+i+'">'+pic
+      +'      <div class="pic-overlay">📷 เปลี่ยนรูป</div>'
+      +'    </div>'
+      +'  </div>'
+      +'  <div class="info">'
+      +'    <input type="text" class="inp lg fld-name" data-i="'+i+'" value="'+escapeHTML(f.name)+'" placeholder="ชื่ออาหาร" maxlength="40">'
+      +'    <div class="info-row">'
+      +'      <label>คะแนน<input type="number" class="inp sm fld-pts" data-i="'+i+'" value="'+f.pts+'" min="1" max="999"></label>'
+      +'      <label>น้ำหนัก<input type="number" class="inp sm fld-w" data-i="'+i+'" value="'+f.w+'" min="1" max="10"></label>'
+      +'      <label>ขนาด<input type="number" class="inp sm fld-size" data-i="'+i+'" value="'+f.size+'" min="40" max="120"></label>'
+      +'      <label>Emoji (สำรอง)<input type="text" class="inp sm fld-emoji" data-i="'+i+'" value="'+escapeHTML(f.emoji||'')+'" maxlength="3"></label>'
+      +'      <label style="flex-direction:row"><input type="checkbox" class="checkbox fld-active" data-i="'+i+'" '+(f.active?'checked':'')+'>เปิดใช้</label>'
+      +'    </div>'
+      +'  </div>'
+      +'  <div class="actions">'
+      +'    <button class="btn btn-sec" data-action="up" data-i="'+i+'" '+(i===0?'disabled style="opacity:.3"':'')+'>↑</button>'
+      +'    <button class="btn btn-sec" data-action="down" data-i="'+i+'" '+(i===cfg.foods.length-1?'disabled style="opacity:.3"':'')+'>↓</button>'
+      +'    <button class="btn btn-danger" data-action="del" data-i="'+i+'">🗑</button>'
+      +'  </div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderRewards(){
+  var el = document.getElementById('rewards');
+  el.innerHTML = cfg.rewards.map(function(r, i){
+    return ''
+      +'<div class="food-card" data-ri="'+i+'">'
+      +'  <div style="font-size:36px;flex-shrink:0;width:60px;text-align:center;align-self:center">'+r.icon+'</div>'
+      +'  <div class="info">'
+      +'    <input type="text" class="inp lg rfld-name" data-i="'+i+'" value="'+escapeHTML(r.name)+'" placeholder="ชื่อคูปอง" maxlength="50">'
+      +'    <input type="text" class="inp lg rfld-desc" data-i="'+i+'" value="'+escapeHTML(r.desc)+'" placeholder="คำอธิบาย" maxlength="80">'
+      +'    <div class="info-row">'
+      +'      <label>Icon<input type="text" class="inp sm rfld-icon" data-i="'+i+'" value="'+escapeHTML(r.icon)+'" maxlength="3"></label>'
+      +'      <label>คะแนนที่ต้องการ<input type="number" class="inp sm rfld-pts" data-i="'+i+'" value="'+r.pts+'" min="1"></label>'
+      +'      <label>วันหมดอายุ<input type="number" class="inp sm rfld-exp" data-i="'+i+'" value="'+r.expDays+'" min="1" max="365"></label>'
+      +'      <label style="flex-direction:row"><input type="checkbox" class="checkbox rfld-active" data-i="'+i+'" '+(r.active?'checked':'')+'>เปิดใช้</label>'
+      +'    </div>'
+      +'    <input type="text" class="inp lg rfld-code" data-i="'+i+'" value="'+escapeHTML(r.coupon)+'" placeholder="รหัสคูปอง เช่น AMRIN-20THB" maxlength="30" style="font-family:monospace">'
+      +'  </div>'
+      +'  <div class="actions">'
+      +'    <button class="btn btn-sec" data-raction="up" data-i="'+i+'" '+(i===0?'disabled style="opacity:.3"':'')+'>↑</button>'
+      +'    <button class="btn btn-sec" data-raction="down" data-i="'+i+'" '+(i===cfg.rewards.length-1?'disabled style="opacity:.3"':'')+'>↓</button>'
+      +'    <button class="btn btn-danger" data-raction="del" data-i="'+i+'">🗑</button>'
+      +'  </div>'
+      +'</div>';
+  }).join('');
+}
+
+function escapeHTML(s){return String(s||'').replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+// ── Sync DOM → cfg (เก็บค่าจาก input ทั้งหมด) ──
+function syncFromDOM(){
+  cfg.bombPenalty = parseInt(document.getElementById('bomb-pen').value, 10) || 10;
+
+  document.querySelectorAll('.fld-name').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].name = inp.value.trim() || 'อาหาร';
+  });
+  document.querySelectorAll('.fld-pts').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].pts = parseInt(inp.value,10) || 1;
+  });
+  document.querySelectorAll('.fld-w').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].w = parseInt(inp.value,10) || 1;
+  });
+  document.querySelectorAll('.fld-size').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].size = parseInt(inp.value,10) || 72;
+  });
+  document.querySelectorAll('.fld-emoji').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].emoji = inp.value || '🍜';
+  });
+  document.querySelectorAll('.fld-active').forEach(function(inp){
+    cfg.foods[+inp.dataset.i].active = inp.checked;
+  });
+
+  document.querySelectorAll('.rfld-name').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].name = inp.value.trim() || 'คูปอง';
+  });
+  document.querySelectorAll('.rfld-desc').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].desc = inp.value;
+  });
+  document.querySelectorAll('.rfld-icon').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].icon = inp.value || '🎟';
+  });
+  document.querySelectorAll('.rfld-pts').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].pts = parseInt(inp.value,10) || 1;
+  });
+  document.querySelectorAll('.rfld-exp').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].expDays = parseInt(inp.value,10) || 30;
+  });
+  document.querySelectorAll('.rfld-code').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].coupon = inp.value.trim().toUpperCase() || 'COUPON';
+  });
+  document.querySelectorAll('.rfld-active').forEach(function(inp){
+    cfg.rewards[+inp.dataset.i].active = inp.checked;
+  });
+}
+
+// ── Picture upload (delegated) ──
+function setupPicUpload(){
+  document.getElementById('foods').addEventListener('click', function(e){
+    var picEl = e.target.closest('.pic');
+    if(!picEl) return;
+    var i = +picEl.dataset.pic;
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(){
+      var file = input.files[0];
+      if(!file) return;
+      if(file.size > 5*1024*1024){toast('❌ ไฟล์ใหญ่เกิน 5MB', true); return;}
+      toast('🔄 กำลังประมวลผลรูป...');
+      resizeImage(file, 200, function(dataUrl){
+        if(!dataUrl){toast('❌ ประมวลผลรูปไม่สำเร็จ', true); return;}
+        syncFromDOM();
+        cfg.foods[i].img = dataUrl;
+        renderFoods();
+        toast('✅ เปลี่ยนรูปแล้ว — กดบันทึกเพื่อยืนยัน');
+      });
+    };
+    input.click();
+  });
+}
+
+// ── Action handlers ──
+function setupActions(){
+  document.getElementById('foods').addEventListener('click', function(e){
+    var btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    syncFromDOM();
+    var i = +btn.dataset.i;
+    var action = btn.dataset.action;
+    if(action === 'del'){
+      if(!confirm('ลบ "'+cfg.foods[i].name+'" ?')) return;
+      cfg.foods.splice(i,1);
+    }else if(action === 'up' && i > 0){
+      var t = cfg.foods[i]; cfg.foods[i] = cfg.foods[i-1]; cfg.foods[i-1] = t;
+    }else if(action === 'down' && i < cfg.foods.length-1){
+      var t2 = cfg.foods[i]; cfg.foods[i] = cfg.foods[i+1]; cfg.foods[i+1] = t2;
+    }
+    renderFoods();
+  });
+
+  document.getElementById('rewards').addEventListener('click', function(e){
+    var btn = e.target.closest('[data-raction]');
+    if(!btn) return;
+    syncFromDOM();
+    var i = +btn.dataset.i;
+    var action = btn.dataset.raction;
+    if(action === 'del'){
+      if(!confirm('ลบคูปอง "'+cfg.rewards[i].name+'" ?')) return;
+      cfg.rewards.splice(i,1);
+    }else if(action === 'up' && i > 0){
+      var t = cfg.rewards[i]; cfg.rewards[i] = cfg.rewards[i-1]; cfg.rewards[i-1] = t;
+    }else if(action === 'down' && i < cfg.rewards.length-1){
+      var t2 = cfg.rewards[i]; cfg.rewards[i] = cfg.rewards[i+1]; cfg.rewards[i+1] = t2;
+    }
+    renderRewards();
+  });
+
+  document.getElementById('add-food').addEventListener('click', function(){
+    syncFromDOM();
+    cfg.foods.push({
+      id:'f'+Date.now(),
+      name:'เมนูใหม่',
+      pts:10, w:1, size:72,
+      emoji:'🍜', img:'',
+      active:true
+    });
+    renderFoods();
+    // scroll ไปดูเมนูที่เพิ่งเพิ่ม
+    setTimeout(function(){
+      var cards = document.querySelectorAll('.food-card');
+      if(cards.length) cards[cards.length-1].scrollIntoView({behavior:'smooth', block:'center'});
+    }, 50);
+  });
+
+  document.getElementById('add-reward').addEventListener('click', function(){
+    syncFromDOM();
+    cfg.rewards.push({
+      pts:50,
+      icon:'🎟',
+      name:'คูปองใหม่',
+      desc:'รายละเอียดคูปอง',
+      coupon:'AMRIN-NEW'+Date.now().toString().slice(-4),
+      expDays:30,
+      active:true
+    });
+    renderRewards();
+  });
+
+  document.getElementById('btn-save').addEventListener('click', function(){
+    syncFromDOM();
+    saveCfg();
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', function(){
+    if(!confirm('⚠️ รีเซ็ตค่าทั้งหมดกลับเป็นค่าเริ่มต้น?\nรูปและการตั้งค่าทั้งหมดจะหายไป')) return;
+    localStorage.removeItem('amrin_admin_cfg');
+    cfg = defCfg();
+    renderAll();
+    toast('🔄 รีเซ็ตเรียบร้อย — กดบันทึกเพื่อยืนยัน');
+  });
+
+  document.getElementById('btn-export').addEventListener('click', function(){
+    syncFromDOM();
+    var blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'amrin-config-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('📤 ดาวน์โหลด JSON แล้ว');
+  });
+
+  document.getElementById('btn-import').addEventListener('click', function(){
+    document.getElementById('import-file').click();
+  });
+
+  document.getElementById('import-file').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var imported = JSON.parse(ev.target.result);
+        if(!imported.foods || !imported.rewards) throw new Error('JSON ไม่ถูกฟอร์แมต');
+        if(!confirm('นำเข้า config นี้และเขียนทับของเดิม?')) return;
+        cfg = imported;
+        renderAll();
+        toast('📥 นำเข้าเรียบร้อย — กดบันทึกเพื่อยืนยัน');
+      }catch(err){
+        toast('❌ ไฟล์ไม่ถูกต้อง: '+err.message, true);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+}
+
+function renderAll(){
+  document.getElementById('bomb-pen').value = cfg.bombPenalty;
+  renderFoods();
+  renderRewards();
+}
+
+// ── Init ──
+loadCfg();
+renderAll();
+setupPicUpload();
+setupActions();
+
+// Auto-save when input loses focus (กันลืมกด save)
+document.addEventListener('change', function(e){
+  if(e.target.matches('.fld-name, .fld-pts, .fld-w, .fld-size, .fld-emoji, .fld-active, .rfld-name, .rfld-desc, .rfld-icon, .rfld-pts, .rfld-exp, .rfld-code, .rfld-active, #bomb-pen')){
+    syncFromDOM();
+    // ไม่ save อัตโนมัติ — รอผู้ใช้กด save เอง เพื่อกัน save ทุกครั้งที่กรอก
+  }
+});
+
+// เตือนถ้าออกหน้าโดยยังไม่ save
+var initialState = JSON.stringify(cfg);
+window.addEventListener('beforeunload', function(e){
+  syncFromDOM();
+  if(JSON.stringify(cfg) !== initialState){
+    e.preventDefault();
+    e.returnValue = 'คุณยังไม่ได้บันทึก — แน่ใจว่าจะออก?';
+  }
+});
+document.getElementById('btn-save').addEventListener('click', function(){
+  initialState = JSON.stringify(cfg);
+});
+</script>
+</body>
+</html>
