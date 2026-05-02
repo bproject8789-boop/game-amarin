@@ -19,8 +19,8 @@ canvas{position:absolute;inset:0;touch-action:none}
 .targets{position:absolute;top:75px;left:0;right:0;display:flex;justify-content:center;gap:5px;padding:0 10px;flex-wrap:wrap}
 .tgt{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:3px 8px;font-size:10px;color:#8a6a40;display:flex;align-items:center;gap:3px;transition:all .3s;white-space:nowrap}
 .tgt.reached{border-color:#FFD000;color:#FFD000;background:rgba(255,208,0,.1)}
-.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);pointer-events:auto;transition:opacity .35s;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
-.screen.hide{opacity:0;pointer-events:none}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);pointer-events:auto;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.screen.hide{display:none}
 .brand-title{font-family:'Noto Serif Thai',serif;font-size:28px;color:#FFD000;text-shadow:0 0 20px rgba(255,180,0,.6);text-align:center;line-height:1.1}
 .brand-sub{font-size:13px;color:#8a6a40;margin-top:4px;text-align:center}
 .deco-line{width:160px;height:1.5px;background:linear-gradient(90deg,transparent,#FFD000,transparent);margin:12px auto}
@@ -122,7 +122,6 @@ canvas{position:absolute;inset:0;touch-action:none}
 
     <button class="btn-fire" id="btn-start" style="pointer-events:auto;touch-action:manipulation">🔪 เริ่มฟัน!</button>
     <button class="btn-sec" id="btn-view-coupons" style="margin-top:8px;pointer-events:auto;touch-action:manipulation">🎟 คูปองของฉัน</button>
-    <a href="admin.html" id="link-admin" style="display:none;margin-top:14px;font-size:11px;color:#5a4020;text-decoration:none;pointer-events:auto;border:1px solid rgba(255,180,0,.15);padding:5px 12px;border-radius:8px">⚙️ Admin</a>
   </div>
 
   <!-- COUPON -->
@@ -188,8 +187,50 @@ function getImg(f){
 }
 
 // ── PLAYER ──
-var PL={uid:'',name:'',phone:'',totalPts:0,coupons:[]};
-function loadPL(uid){try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)PL=d;}catch(e){}}
+var PL={uid:'',name:'',phone:'',totalPts:0,coupons:[],lastResetDate:''};
+
+// ── DATE HELPERS (Asia/Bangkok timezone) ──
+// ใช้ "วันที่ตามเวลาไทย" ในรูปแบบ YYYY-MM-DD เพื่อเช็คว่าข้ามวันหรือยัง
+function todayKey(){
+  var d=new Date();
+  // แปลงเป็นเวลาไทย UTC+7
+  var th=new Date(d.getTime()+(d.getTimezoneOffset()+420)*60000);
+  return th.getFullYear()+'-'+String(th.getMonth()+1).padStart(2,'0')+'-'+String(th.getDate()).padStart(2,'0');
+}
+// คืนค่าวันที่จาก ISO string ในรูปแบบ YYYY-MM-DD ตามเวลาไทย
+function dateKeyFromISO(iso){
+  if(!iso)return '';
+  var d=new Date(iso);
+  var th=new Date(d.getTime()+(d.getTimezoneOffset()+420)*60000);
+  return th.getFullYear()+'-'+String(th.getMonth()+1).padStart(2,'0')+'-'+String(th.getDate()).padStart(2,'0');
+}
+// คูปองหมดอายุตอน 00:00 ของวันถัดไปที่ได้รับ
+function isCouponExpired(cp){
+  var earnedDate=dateKeyFromISO(cp.earnedAt);
+  return earnedDate<todayKey();
+}
+
+// ตรวจ daily reset — ถ้าวันใหม่ ให้รีเซ็ตคะแนนสะสม
+function checkDailyReset(){
+  var today=todayKey();
+  if(PL.lastResetDate!==today){
+    // วันใหม่ — รีเซ็ตคะแนนสะสม
+    PL.totalPts=0;
+    PL.lastResetDate=today;
+    // ลบคูปองที่หมดอายุออกด้วย
+    if(PL.coupons&&PL.coupons.length){
+      PL.coupons=PL.coupons.filter(function(cp){return !isCouponExpired(cp)||cp.used;});
+    }
+    savePL();
+  }
+}
+
+function loadPL(uid){
+  try{var d=JSON.parse(localStorage.getItem('amrin_player_'+uid));if(d)PL=d;}catch(e){}
+  if(!PL.lastResetDate)PL.lastResetDate='';
+  if(!PL.coupons)PL.coupons=[];
+  checkDailyReset();
+}
 function savePL(){localStorage.setItem('amrin_player_'+PL.uid,JSON.stringify(PL));localStorage.setItem('amrin_last_uid',PL.uid);}
 
 // ════════════════════════════════════════════════════════
@@ -454,7 +495,11 @@ function startGame(){
   animId=requestAnimationFrame(function(t){lastT=t;loop(t);});
 }
 
-function expDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});}
+// คูปองหมดอายุ 00:00 ของวันถัดไป — แสดงเป็น "พรุ่งนี้ 00:00"
+function expDate(d){
+  var dt=new Date();dt.setDate(dt.getDate()+1);dt.setHours(0,0,0,0);
+  return dt.toLocaleDateString('th-TH',{month:'short',day:'numeric'})+' 00:00';
+}
 
 function endGame(){
   active=false;
@@ -462,10 +507,18 @@ function endGame(){
   document.getElementById('hud').style.display='none';
   document.getElementById('targets').style.display='none';
   try{
-    var cfg=getAdminCfg(),nc=[];
+    // เช็ค daily reset ก่อนสะสมคะแนน (เผื่อข้ามวันระหว่างเล่น)
+    checkDailyReset();
+    var cfg=getAdminCfg(),nc=[],today=todayKey();
     cfg.rewards.filter(function(r){return r.active&&score>=r.pts;}).forEach(function(r){
-      var already=PL.coupons.some(function(cp){return cp.code===r.coupon&&!cp.used;});
-      if(!already){PL.coupons.push({code:r.coupon,name:r.name,desc:r.desc,icon:r.icon,expDays:r.expDays,earnedAt:new Date().toISOString(),used:false});nc.push(r);}
+      // คูปองชนิดเดียวกัน ได้แค่ 1 ครั้ง/วัน — เช็คจากวันที่ได้รับ
+      var gotToday=PL.coupons.some(function(cp){
+        return cp.code===r.coupon&&dateKeyFromISO(cp.earnedAt)===today;
+      });
+      if(!gotToday){
+        PL.coupons.push({code:r.coupon,name:r.name,desc:r.desc,icon:r.icon,earnedAt:new Date().toISOString(),used:false});
+        nc.push(r);
+      }
     });
     PL.totalPts=(PL.totalPts||0)+score;
     document.getElementById('p-pts').textContent='คะแนนสะสม: '+PL.totalPts;
@@ -478,14 +531,16 @@ function endGame(){
     document.getElementById('rs').textContent=score;
     document.getElementById('rc-list').innerHTML=cfg.rewards.filter(function(r){return r.active;}).map(function(r){
       var got=score>=r.pts,isNew=nc.some(function(n){return n.coupon===r.coupon;});
+      var gotToday=PL.coupons.some(function(cp){return cp.code===r.coupon&&dateKeyFromISO(cp.earnedAt)===today;});
+      var alreadyMsg=got&&!isNew&&gotToday?'<div style="font-size:10px;color:#FFD000;margin-top:2px">✓ ได้รับวันนี้แล้ว</div>':'';
       return '<div class="rc '+(got?'got':'locked')+'">'
         +'<div style="font-size:20px;width:26px;text-align:center;flex-shrink:0">'+r.icon+'</div>'
         +'<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#FFD000">'+(isNew?'🆕 ':'')+r.name+'</div>'
         +'<div style="font-size:10px;color:#8a6a40;margin-top:2px">'+r.desc+'</div>'
-        +(got?'<div style="font-family:monospace;font-size:13px;color:#fff;background:rgba(0,0,0,.4);border-radius:4px;padding:2px 7px;display:inline-block;margin-top:3px;letter-spacing:.1em">'+r.coupon+'</div>'
-             +'<div style="font-size:10px;color:#e57373;margin-top:2px">⏰ หมดอายุ: '+expDate(r.expDays)+'</div>'
+        +(got?(isNew?'<div style="font-family:monospace;font-size:13px;color:#fff;background:rgba(0,0,0,.4);border-radius:4px;padding:2px 7px;display:inline-block;margin-top:3px;letter-spacing:.1em">'+r.coupon+'</div>'
+             +'<div style="font-size:10px;color:#e57373;margin-top:2px">⏰ หมดอายุ: '+expDate()+'</div>':alreadyMsg)
           :'<div style="font-size:10px;color:#5a4020">ต้องการ '+r.pts+' คะแนน</div>')
-        +'</div><div style="font-size:18px">'+(got?'✅':'🔒')+'</div></div>';
+        +'</div><div style="font-size:18px">'+(got?(isNew?'✅':'☑️'):'🔒')+'</div></div>';
     }).join('');
   }catch(err){
     console.error('endGame err:',err);
@@ -504,19 +559,27 @@ function viewCoupons(){
     document.getElementById('hud').style.display='none';
     document.getElementById('targets').style.display='none';
   }
+  // เช็ค daily reset เผื่อข้ามวัน
+  checkDailyReset();
   hideAll();
   var el=document.getElementById('my-coupons'),cps=PL.coupons||[];
   if(!cps.length){el.innerHTML='<div style="text-align:center;color:#8a6a40;padding:20px">ยังไม่มีคูปอง<br>เล่นเกมส์เพื่อรับคูปอง!</div>';}
   else el.innerHTML=cps.map(function(cp,i){
-    var now=new Date(),exp=new Date(cp.earnedAt);exp.setDate(exp.getDate()+(cp.expDays||30));
-    var expired=now>exp;var stat=cp.used?'ใช้แล้ว':expired?'หมดอายุ':'ใช้ได้';var sc=cp.used?'#ef9a9a':expired?'#e57373':'#a5d6a7';
+    // คูปองหมดอายุเมื่อข้ามวัน — เทียบ date key ของวันที่ได้รับกับวันนี้
+    var expired=isCouponExpired(cp);
+    // คำนวณวันหมดอายุที่จะแสดง = 00:00 ของวันถัดไปที่ได้รับ
+    var earnedDt=new Date(cp.earnedAt);
+    var expDt=new Date(earnedDt.getTime()+(earnedDt.getTimezoneOffset()+420)*60000);
+    expDt.setHours(24,0,0,0); // 00:00 ของวันถัดไป (ตามเวลาไทย)
+    var stat=cp.used?'ใช้แล้ว':expired?'หมดอายุ':'ใช้ได้';
+    var sc=cp.used?'#ef9a9a':expired?'#e57373':'#a5d6a7';
     return '<div style="background:rgba(255,208,0,'+(cp.used||expired?.04:.1)+');border:1px solid rgba(255,208,0,'+(cp.used||expired?.15:.35)+');border-radius:12px;padding:12px;opacity:'+(cp.used||expired?.5:1)+'">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<span style="font-size:22px">'+cp.icon+'</span>'
       +'<div><div style="font-size:13px;font-weight:600;color:#FFD000">'+cp.name+'</div><div style="font-size:10px;color:#8a6a40">'+cp.desc+'</div></div>'
       +'<div style="margin-left:auto;font-size:11px;color:'+sc+'">'+stat+'</div></div>'
       +'<div style="font-family:monospace;font-size:15px;color:#fff;background:rgba(0,0,0,.4);border-radius:6px;padding:4px 10px;display:inline-block;letter-spacing:.1em">'+cp.code+'</div>'
-      +'<div style="font-size:10px;color:#e57373;margin-top:4px">⏰ หมดอายุ: '+exp.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'})+'</div>'
+      +'<div style="font-size:10px;color:#e57373;margin-top:4px">⏰ หมดอายุ: '+expDt.toLocaleDateString('th-TH',{month:'short',day:'numeric'})+' 00:00</div>'
       +(!cp.used&&!expired?'<button class="use-cp-btn" data-cp-idx="'+i+'" style="margin-top:8px;padding:10px 20px;background:linear-gradient(135deg,#bf360c,#E64A19);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Mitr,sans-serif;touch-action:manipulation;pointer-events:auto;-webkit-tap-highlight-color:rgba(255,180,0,.3);position:relative;z-index:10">ใช้คูปองนี้</button>':'')
       +'</div>';
   }).join('');
@@ -588,6 +651,9 @@ function goTitle(){
   if(animId){cancelAnimationFrame(animId);animId=null;}
   document.getElementById('hud').style.display='none';
   document.getElementById('targets').style.display='none';
+  // เช็ค daily reset เผื่อข้ามวันระหว่างเล่น
+  checkDailyReset();
+  document.getElementById('p-pts').textContent='คะแนนสะสม: '+(PL.totalPts||0);
   hideAll();buildMenuPreview();document.getElementById('scr-title').classList.remove('hide');
 }
 
@@ -597,15 +663,22 @@ function goTitle(){
 // ถ้า browser ไม่ support pointerup ใช้ click แทน
 function bindTap(el, fn){
   if(!el)return;
+  function safeFn(e){
+    // ตรวจว่าปุ่มมองเห็นจริงๆ ไหม — ป้องกัน click ทะลุจาก element ที่ซ่อนอยู่
+    if(el.offsetParent===null)return; // hidden via display:none
+    var screen=el.closest('.screen');
+    if(screen&&screen.classList.contains('hide'))return;
+    fn(e);
+  }
   if('onpointerup' in window){
     // pointer events ครอบคลุมทั้ง mouse, touch, pen — ไม่ยิง 2 รอบ
     el.addEventListener('pointerup',function(e){
       if(e.button!=null&&e.button!==0)return; // เฉพาะ left click
-      fn(e);
+      safeFn(e);
     });
   }else{
     // fallback: click อย่างเดียว
-    el.addEventListener('click',fn);
+    el.addEventListener('click',safeFn);
   }
 }
 
@@ -641,13 +714,13 @@ window.addEventListener('load',function(){
   }
 
   // ── Admin panel triggers ──
-  // เปิด admin ผ่าน URL ?admin=1 — แสดงปุ่มลิงค์
+  // เปิด admin ผ่าน URL ?admin=1 — redirect ทันที
   if(/[?&]admin=1/.test(location.search)){
-    var lk=document.getElementById('link-admin');
-    if(lk)lk.style.display='inline-block';
+    location.href='admin.html';
+    return;
   }
 
-  // กดที่ title 5 ครั้งติดกัน (3 วินาที) เพื่อแสดงปุ่ม admin
+  // กดที่ title 5 ครั้งติดกัน (3 วินาที) เพื่อเข้าหน้า admin
   var titleTaps=0,titleTimer=null;
   document.querySelectorAll('.brand-title').forEach(function(el){
     el.style.cursor='pointer';
@@ -657,8 +730,7 @@ window.addEventListener('load',function(){
       titleTimer=setTimeout(function(){titleTaps=0;},3000);
       if(titleTaps>=5){
         titleTaps=0;
-        var lk=document.getElementById('link-admin');
-        if(lk){lk.style.display='inline-block';lk.textContent='⚙️ Admin (เปิดแล้ว)';}
+        location.href='admin.html';
       }
     });
   });
